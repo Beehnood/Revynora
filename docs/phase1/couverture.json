@@ -1,0 +1,67 @@
+{
+  "date": "2026-10-16",
+  "web": {
+    "lines": {
+      "total": 2193,
+      "covered": 2167,
+      "skipped": 0,
+      "pct": 98.81
+    },
+    "statements": {
+      "total": 2193,
+      "covered": 2167,
+      "skipped": 0,
+      "pct": 98.81
+    },
+    "functions": {
+      "total": 76,
+      "covered": 72,
+      "skipped": 0,
+      "pct": 94.73
+    },
+    "branches": {
+      "total": 458,
+      "covered": 441,
+      "skipped": 0,
+      "pct": 96.28
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  },
+  "api": {
+    "lines": {
+      "total": 1509,
+      "covered": 1476,
+      "skipped": 0,
+      "pct": 97.81
+    },
+    "statements": {
+      "total": 1509,
+      "covered": 1476,
+      "skipped": 0,
+      "pct": 97.81
+    },
+    "functions": {
+      "total": 74,
+      "covered": 74,
+      "skipped": 0,
+      "pct": 100
+    },
+    "branches": {
+      "total": 266,
+      "covered": 243,
+      "skipped": 0,
+      "pct": 91.35
+    },
+    "branchesTrue": {
+      "total": 0,
+      "covered": 0,
+      "skipped": 0,
+      "pct": 100
+    }
+  }
+}

@@ -1,0 +1,15 @@
+# ADR 005 · Génération et évaluation
+
+Statut : accepté. Architecture Phase 0 conservée ; modules Nest Auth, Learning et AI ajoutés.
+
+Le port AiProvider isole la génération. Le mode mock est explicite : trois banques d’exercices débutants (cellules, fractions, présent simple), aucune génération prétendue. Un sujet non supporté est refusé et tracé. Le mode OpenAI utilise Responses, store=false et text.format JSON Schema strict, puis validation Zod et invariants (exactement 5 questions, options distinctes, distracteur, cardinalité SINGLE/MULTIPLE cohérente). Le fournisseur ne voit que domaine/sujet/niveau, jamais l’identité, les réponses ou le mot de passe. Une erreur ne déclenche jamais un repli silencieux vers le mock.
+
+Référence utilisée : [Structured Outputs, documentation officielle OpenAI](https://developers.openai.com/api/docs/guides/structured-outputs?api-mode=responses). L’intégration est testée avec des réponses HTTP simulées ; aucun appel payant réel n’a été effectué et aucune clé n’a été demandée ou enregistrée par l’agent. Le modèle par défaut gpt-4.1-mini est configurable côté serveur, sans modification d’architecture.
+
+Les retries sont bornés (2 par défaut, maximum 3), chaque appel a un timeout. Une réservation de quota quotidienne par utilisateur, sous verrou de ligne SQL, précède la génération. Succès et échecs consomment la réservation ; les retries ne consomment pas de nouvelles unités. AIUsage stocke état, fournisseur/modèle, tentatives, tokens disponibles et code d’erreur, sans prompt ni sortie générée. Les coûts OpenAI restent null si les deux tarifs par million de tokens ne sont pas configurés ; aucun prix n’est inventé. Un crash peut laisser une réservation PENDING, qui reste comptabilisée ce jour-là.
+
+QuestionOption.correct et Question.explanation ne sont jamais sérialisés par les endpoints quiz. Le mini-cours AI n’apparaît pas dans `/courses` avant qu’une tentative associée soit soumise. Le résultat et la correction ne sont accessibles qu’au propriétaire après soumission. La structure ne garantit pas la véracité factuelle d’une IA : l’interface invite à comparer les résultats aux supports de référence. Les banques mock sont des contenus pédagogiques prédéfinis.
+
+Chaque question vaut 20 points, comparaison exacte des ensembles d’options, pas de crédit partiel. Une notion avec au moins une erreur est classée « à approfondir », même si elle a aussi une réponse correcte. Sauvegarde et soumission verrouillent la même ligne QuizAttempt. La première soumission fige score et date ; les suivantes retournent le même résultat. Une sauvegarde tardive renvoie 409. L’option de sélection vide efface la réponse enregistrée ; une soumission incomplète est refusée.
+
+La pagination est bornée à 20 éléments. Le tableau de bord présente le dernier score, la moyenne des dix derniers tests terminés et les notions faibles du dernier test. Les cours sont privés sauf ressources éditoriales ADMIN explicites. Aucun système Leitner, calendrier, facturation ou LMS étendu n’est ajouté.

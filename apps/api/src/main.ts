@@ -1,0 +1,14 @@
+import "reflect-metadata";
+import { NestFactory } from "@nestjs/core";
+import { AppModule } from "./app.module";
+import { loadEnvironment } from "./shared/config/environment";
+import { configureApp } from "./shared/http/configure";
+async function bootstrap() {
+  const env = loadEnvironment();
+  const app = configureApp(await NestFactory.create(AppModule));
+  await app.listen(env.PORT, "127.0.0.1");
+}
+bootstrap().catch(() => {
+  console.error("Démarrage API impossible : vérifiez la configuration.");
+  process.exitCode = 1;
+});
