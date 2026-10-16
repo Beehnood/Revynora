@@ -1,0 +1,66 @@
+{
+  "phase": 2,
+  "date": "2026-10-16",
+  "tests": {
+    "web": 36,
+    "apiUnit": 27,
+    "apiHttpPostgresql": 23,
+    "apiTotal": 50,
+    "e2e": 14,
+    "uniqueTotal": 100
+  },
+  "coverage": {
+    "web": {
+      "lines": {
+        "total": 3455,
+        "covered": 3355,
+        "skipped": 0,
+        "pct": 97.1
+      },
+      "statements": {
+        "total": 3455,
+        "covered": 3355,
+        "skipped": 0,
+        "pct": 97.1
+      },
+      "functions": {
+        "total": 133,
+        "covered": 123,
+        "skipped": 0,
+        "pct": 92.48
+      },
+      "branches": {
+        "total": 703,
+        "covered": 627,
+        "skipped": 0,
+        "pct": 89.18
+      }
+    },
+    "api": {
+      "lines": {
+        "total": 4000,
+        "covered": 3787,
+        "skipped": 0,
+        "pct": 94.67
+      },
+      "statements": {
+        "total": 4000,
+        "covered": 3787,
+        "skipped": 0,
+        "pct": 94.67
+      },
+      "functions": {
+        "total": 247,
+        "covered": 243,
+        "skipped": 0,
+        "pct": 98.38
+      },
+      "branches": {
+        "total": 761,
+        "covered": 646,
+        "skipped": 0,
+        "pct": 84.88
+      }
+    }
+  }
+}

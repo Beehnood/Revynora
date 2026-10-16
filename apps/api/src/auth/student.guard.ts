@@ -12,11 +12,11 @@ export class StudentGuard implements CanActivate {
   async canActivate(context: ExecutionContext) {
     const req = context.switchToHttp().getRequest<AuthRequest>();
     req.student = await this.auth.identify(req);
-    if (req.student.role !== "STUDENT" || req.student.plan !== "FREE")
+    if (req.student.role !== "STUDENT")
       throw new ApiError(
         403,
         "FORBIDDEN",
-        "Cet espace est réservé aux comptes étudiants FREE.",
+        "Cet espace est réservé aux comptes étudiants.",
       );
     return true;
   }

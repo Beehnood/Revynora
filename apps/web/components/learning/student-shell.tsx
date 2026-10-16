@@ -30,6 +30,10 @@ const links = [
   { name: "Nouveau diagnostic", href: "/app/diagnostic", icon: ClipboardCheck },
   { name: "Mes tests", href: "/app/historique", icon: History },
   { name: "Mes cours", href: "/app/cours", icon: BookOpen },
+  { name: "Révisions", href: "/app/revisions", icon: Repeat2 },
+  { name: "Planning", href: "/app/planning", icon: CalendarDays },
+  { name: "Abonnement", href: "/app/abonnement", icon: GraduationCap },
+  { name: "Notifications", href: "/app/notifications", icon: Settings },
   { name: "Mon profil", href: "/app/profil", icon: Settings },
 ];
 export function StudentShell({
@@ -72,16 +76,10 @@ export function StudentShell({
                 {l.name}
               </Link>
             ))}
-            <span className="nav-future">
-              <Repeat2 size={19} /> Révisions <small>À venir</small>
-            </span>
-            <span className="nav-future">
-              <CalendarDays size={19} /> Planning <small>À venir</small>
-            </span>
           </nav>
           <div className="sidebar-bottom">
             <div className="sidebar-tip">
-              <Badge>FREE</Badge>
+              <Badge>{user.plan}</Badge>
               <h3>Chaque essai te fait avancer.</h3>
               <p>
                 Un test pour découvrir ce que tu sais, un cours pour aller plus
@@ -135,7 +133,7 @@ export function StudentShell({
               </span>
               <div>
                 <strong>{user.name}</strong>
-                <small>Étudiant · FREE</small>
+                <small>Étudiant · {user.plan}</small>
               </div>
             </div>
           </header>
@@ -143,7 +141,7 @@ export function StudentShell({
             {error && <Alert role="alert">{error}</Alert>}
             {children}
             <p className="dashboard-footnote">
-              Revynora · Ton espace d’apprentissage privé · Phase 1
+              Revynora · Ton espace d’apprentissage privé · Phase 2
             </p>
           </main>
         </div>

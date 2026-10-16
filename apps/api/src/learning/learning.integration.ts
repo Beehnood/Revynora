@@ -18,6 +18,8 @@ if (url.pathname !== "/revynora_test")
   throw new Error("Base de test dédiée revynora_test obligatoire");
 process.env.DATABASE_URL = url.toString();
 process.env.AI_PROVIDER = "mock";
+process.env.WORKER_ENABLED = "false";
+process.env.BILLING_PROVIDER = "mock";
 process.env.AI_DAILY_LIMIT = "3";
 process.env.AI_MAX_ATTEMPTS = "2";
 let app: INestApplication, base: string, db: PrismaClient;
@@ -70,6 +72,7 @@ async function register(label: string) {
     name: label,
     email: `phase1-${label}-${crypto.randomUUID()}@example.test`,
     password,
+    termsAccepted: true,
   });
   expect(result.status).toBe(201);
   ids.push(result.data.id);
@@ -133,6 +136,7 @@ describe.sequential("MVP sur PostgreSQL et HTTP réels", () => {
           name: "Alice",
           email: userA.email.toUpperCase(),
           password,
+          termsAccepted: true,
         })
       ).status,
     ).toBe(409);
@@ -170,9 +174,9 @@ describe.sequential("MVP sur PostgreSQL et HTTP réels", () => {
       (await request("/attempts/not-a-uuid", "GET", undefined, cookieA)).status,
     ).toBe(400);
     await db.user.update({ where: { id: userB.id }, data: { role: "ADMIN" } });
-    expect((await request("/users/me", "GET", undefined, cookieB)).status).toBe(
-      403,
-    );
+    expect(
+      (await request("/learning/summary", "GET", undefined, cookieB)).status,
+    ).toBe(403);
     await db.user.update({
       where: { id: userB.id },
       data: { role: "STUDENT" },
@@ -461,9 +465,9 @@ describe.sequential("MVP sur PostgreSQL et HTTP réels", () => {
       where: { userId: userB.id },
       data: { expiresAt: new Date(0) },
     });
-    expect((await request("/users/me", "GET", undefined, cookieB)).status).toBe(
-      401,
-    );
+    expect(
+      (await request("/learning/summary", "GET", undefined, cookieB)).status,
+    ).toBe(401);
     const login = await request("/auth/login", "POST", {
       email: userB.email,
       password,

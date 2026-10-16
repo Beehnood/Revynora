@@ -11,6 +11,8 @@ enum Role {
 }
 enum Plan {
   FREE
+  PLUS
+  PRO
 }
 enum CourseSource {
   USER
@@ -43,6 +45,21 @@ model User {
   quizzes Quiz[]
   attempts QuizAttempt[]
   aiUsage AIUsage[]
+  timeZone String @default("Europe/Paris")
+  remindersEnabled Boolean @default(false)
+  reminderConsentAt DateTime?
+  termsAcceptedAt DateTime?
+  disabledAt DateTime?
+  stripeCustomerId String? @unique
+  subscriptionPeriods UserSubscriptionHistory[]
+  payments Payment[]
+  paymentEvents UserPaymentHistory[]
+  checkoutIntents CheckoutIntent[]
+  leitnerCards LeitnerCard[]
+  revisions Revision[]
+  studyPlans StudyPlan[]
+  emails EmailMessage[]
+  auditActions AuditLog[] @relation("AuditActor")
 }
 model Session {
   id String @id @default(uuid())
@@ -64,6 +81,8 @@ model Course {
   source CourseSource @default(USER)
   createdAt DateTime @default(now())
   quizzes Quiz[]
+  cards LeitnerCard[]
+  revisions Revision[]
   @@index([ownerId, createdAt])
 }
 model Quiz {
@@ -139,4 +158,200 @@ model AIUsage {
   errorCode String?
   createdAt DateTime @default(now())
   @@index([userId, createdAt])
+}
+
+enum SubscriptionStatus {
+  ACTIVE
+  PAST_DUE
+  CANCELLED
+  INCOMPLETE
+}
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+}
+enum TaskStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+enum MailStatus {
+  QUEUED
+  SENT
+  FAILED
+  CANCELLED
+}
+model Subscription {
+  id String @id @default(uuid())
+  code Plan @unique
+  name String
+  priceCents Int
+  currency String @default("eur")
+  interval String @default("month")
+  active Boolean @default(true)
+  providerPriceId String? @unique
+  periods UserSubscriptionHistory[]
+}
+model UserSubscriptionHistory {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  subscriptionId String
+  subscription Subscription @relation(fields:[subscriptionId],references:[id],onDelete:Restrict)
+  provider String
+  providerSubscriptionId String
+  priceCents Int
+  currency String
+  status SubscriptionStatus
+  startsAt DateTime
+  endsAt DateTime
+  cancelAtPeriodEnd Boolean @default(false)
+  createdAt DateTime @default(now())
+  @@unique([providerSubscriptionId, startsAt, subscriptionId])
+  @@index([userId, startsAt, endsAt])
+}
+model CheckoutIntent {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  plan Plan
+  provider String
+  providerSessionId String? @unique
+  url String?
+  status String @default("PENDING")
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+model BillingState {
+  providerSubscriptionId String @id
+  customerId String
+  lastEventCreated BigInt @default(0)
+  updatedAt DateTime @updatedAt
+}
+model Payment {
+  id String @id @default(uuid())
+  userId String?
+  user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+  providerReference String @unique
+  provider String
+  amountCents Int
+  currency String
+  status PaymentStatus
+  receiptUrl String?
+  periodId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  events UserPaymentHistory[]
+  @@index([userId, createdAt])
+}
+model UserPaymentHistory {
+  id String @id @default(uuid())
+  userId String?
+  user User? @relation(fields:[userId],references:[id],onDelete:SetNull)
+  paymentId String?
+  payment Payment? @relation(fields:[paymentId],references:[id],onDelete:SetNull)
+  providerEventId String @unique
+  eventType String
+  amountCents Int?
+  status String
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+model LeitnerCard {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  courseId String?
+  course Course? @relation(fields:[courseId],references:[id],onDelete:SetNull)
+  front String
+  back String
+  box Int @default(1)
+  dueAt DateTime @default(now())
+  version Int @default(0)
+  archivedAt DateTime?
+  createdAt DateTime @default(now())
+  revisions Revision[]
+  @@index([userId, dueAt])
+}
+model Revision {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  cardId String
+  card LeitnerCard @relation(fields:[cardId],references:[id],onDelete:Cascade)
+  courseId String?
+  course Course? @relation(fields:[courseId],references:[id],onDelete:SetNull)
+  requestId String @unique
+  remembered Boolean
+  fromBox Int
+  toBox Int
+  nextDueAt DateTime
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+model StudyPlan {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  title String
+  timeZone String
+  createdAt DateTime @default(now())
+  items StudyPlanItem[]
+  @@index([userId, createdAt])
+}
+model StudyPlanItem {
+  id String @id @default(uuid())
+  planId String
+  plan StudyPlan @relation(fields:[planId],references:[id],onDelete:Cascade)
+  title String
+  startsAt DateTime
+  endsAt DateTime
+  status TaskStatus @default(PLANNED)
+  reminderMinutes Int?
+  version Int @default(0)
+  createdAt DateTime @default(now())
+  @@index([startsAt])
+}
+model EmailMessage {
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+  kind String
+  subject String
+  body String
+  provider String @default("local")
+  status MailStatus @default(QUEUED)
+  idempotencyKey String @unique
+  attempts Int @default(0)
+  sentAt DateTime?
+  createdAt DateTime @default(now())
+  @@index([userId, createdAt])
+}
+model AuditLog {
+  id String @id @default(uuid())
+  actorId String?
+  actor User? @relation("AuditActor",fields:[actorId],references:[id],onDelete:SetNull)
+  targetUserId String?
+  action String
+  entityType String
+  entityId String?
+  createdAt DateTime @default(now())
+  @@index([createdAt])
+}
+
+model MockBillingRecord {
+ id String @id
+ snapshot Json
+ updatedAt DateTime @updatedAt
+}
+model ReminderDelivery {
+ id String @id @default(uuid())
+ itemId String
+ version Int
+ dueAt DateTime
+ status String @default("PENDING")
+ @@unique([itemId, version])
 }

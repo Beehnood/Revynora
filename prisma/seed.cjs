@@ -8,6 +8,16 @@ require(
 const { PrismaClient } = require("@prisma/client");
 const db = new PrismaClient();
 (async () => {
+  for (const [code, priceCents] of [
+    ["FREE", 0],
+    ["PLUS", 250],
+    ["PRO", 500],
+  ])
+    await db.subscription.upsert({
+      where: { code },
+      create: { code, name: code, priceCents },
+      update: { name: code, priceCents },
+    });
   await db.course.upsert({
     where: { id: "00000000-0000-4000-8000-000000000001" },
     update: {},

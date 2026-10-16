@@ -9,6 +9,13 @@ export default defineConfig({
       provider: "v8",
       include: [
         "src/auth/**/*.ts",
+        "src/billing/**/*.ts",
+        "src/leitner/**/*.ts",
+        "src/planning/**/*.ts",
+        "src/notifications/**/*.ts",
+        "src/admin/**/*.ts",
+        "src/privacy/**/*.ts",
+        "src/shared/domain/**/*.ts",
         "src/learning/**/*.ts",
         "src/ai/**/*.ts",
         "src/shared/http/**/*.ts",

@@ -38,6 +38,8 @@ export default defineConfig({
       env: {
         DATABASE_URL: database,
         AI_PROVIDER: "mock",
+        BILLING_PROVIDER: "mock",
+        WORKER_ENABLED: "false",
         AI_DAILY_LIMIT: "10",
         PORT: "3001",
         COOKIE_SECURE: "false",

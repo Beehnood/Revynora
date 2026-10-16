@@ -25,6 +25,7 @@ export default async function StudentLayout({
   if (response.status === 401) redirect("/connexion");
   if (!response.ok) return <Offline />;
   const user = (await response.json()) as UserProfile;
+  if (user.role === "ADMIN") redirect("/admin");
   return <StudentShell user={user}>{children}</StudentShell>;
 }
 function Offline() {

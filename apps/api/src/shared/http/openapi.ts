@@ -1,3 +1,4 @@
+import { completeSaasOpenApi } from "./saas-openapi";
 import type {
   OpenAPIObject,
   SchemaObject,
@@ -56,7 +57,10 @@ export function completeOpenApi(doc: OpenAPIObject) {
       name: str,
       email: { type: "string", format: "email" },
       role: { type: "string", enum: ["STUDENT", "ADMIN"] },
-      plan: { type: "string", enum: ["FREE"] },
+      plan: { type: "string", enum: ["FREE", "PLUS", "PRO"] },
+      timeZone: { type: "string" },
+      remindersEnabled: { type: "boolean" },
+      disabledAt: { type: "string", format: "date-time", nullable: true },
       createdAt: date,
     }),
     Quiz: object({
@@ -157,7 +161,7 @@ export function completeOpenApi(doc: OpenAPIObject) {
     "GET /api/v1/health/ready": "Ready",
   };
   for (const [path, item] of Object.entries(doc.paths)) {
-    for (const method of ["get", "post", "put"] as const) {
+    for (const method of ["get", "post", "put", "patch", "delete"] as const) {
       const op = item[method];
       if (!op) continue;
       const name = responses[`${method.toUpperCase()} ${path}`];
@@ -195,5 +199,5 @@ export function completeOpenApi(doc: OpenAPIObject) {
       }
     }
   }
-  return doc;
+  return completeSaasOpenApi(doc);
 }

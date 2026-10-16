@@ -10,6 +10,17 @@ export const demoFormSchema = z.object({
 });
 export const environmentSchema = z
   .object({
+    BILLING_PROVIDER: z.enum(["mock", "stripe"]).default("mock"),
+    WORKER_ENABLED: z.enum(["true", "false"]).default("true"),
+    MAIL_PROVIDER: z.enum(["local", "smtp"]).default("local"),
+    REDIS_URL: z
+      .url()
+      .refine((v) => ["redis:", "rediss:"].includes(new URL(v).protocol))
+      .default("redis://127.0.0.1:6380"),
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_PRICE_PLUS: z.string().optional(),
+    STRIPE_PRICE_PRO: z.string().optional(),
     AI_PROVIDER: z.enum(["mock", "openai"]).default("mock"),
     OPENAI_API_KEY: z.string().optional(),
     OPENAI_MODEL: z.string().min(1).default("gpt-4.1-mini"),
@@ -32,6 +43,18 @@ export const environmentSchema = z
       .refine((v) => new URL(v).origin === v, "Origine sans chemin requise")
       .default("http://localhost:3000"),
   })
+  .refine(
+    (v) =>
+      v.BILLING_PROVIDER !== "stripe" ||
+      (v.STRIPE_SECRET_KEY?.startsWith("sk_test_") &&
+        !!v.STRIPE_WEBHOOK_SECRET &&
+        !!v.STRIPE_PRICE_PLUS &&
+        !!v.STRIPE_PRICE_PRO),
+    {
+      message: "Configuration Stripe test complète requise",
+      path: ["BILLING_PROVIDER"],
+    },
+  )
   .refine((v) => v.AI_PROVIDER !== "openai" || !!v.OPENAI_API_KEY?.trim(), {
     message: "OPENAI_API_KEY requise en mode openai",
     path: ["OPENAI_API_KEY"],
@@ -39,6 +62,9 @@ export const environmentSchema = z
 
 export const registerSchema = z
   .object({
+    termsAccepted: z.literal(true, {
+      error: "Accepte les conditions pour créer ton compte.",
+    }),
     name: z.string().trim().min(2, "Indiquez au moins 2 caractères.").max(80),
     email: z.email("Adresse e-mail invalide.").trim().toLowerCase().max(254),
     password: z
@@ -47,7 +73,10 @@ export const registerSchema = z
       .max(128, "128 caractères maximum."),
   })
   .strict();
-export const loginSchema = registerSchema.omit({ name: true });
+export const loginSchema = registerSchema.omit({
+  name: true,
+  termsAccepted: true,
+});
 export const diagnosticSchema = z
   .object({
     domain: z.enum(["Sciences", "Mathématiques", "Langues"]),

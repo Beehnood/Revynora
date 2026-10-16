@@ -70,7 +70,7 @@ export default function Home() {
             </div>
             <div className="hero-note">
               <Check size={16} /> Compte FREE <span>·</span> Sans carte bancaire{" "}
-              <span>·</span> Phase 1
+              <span>·</span> Espace privé
             </div>
           </div>
           <div
@@ -177,7 +177,7 @@ export default function Home() {
                 <small>{s.label}</small>
                 <h3>{s.title}</h3>
                 <p>{s.text}</p>
-                <Badge>À venir</Badge>
+                <Badge>Disponible</Badge>
               </Card>
             ))}
           </div>
@@ -206,9 +206,9 @@ export default function Home() {
               <h2>Ton rythme. Ton choix.</h2>
             </div>
             <p>
-              Offres prévisionnelles · aucun achat disponible.
+              Trois offres mensuelles, sans période d’essai.
               <br />
-              Le compte FREE est disponible en local.
+              Facturation de test ou simulation locale, sans prélèvement réel.
             </p>
           </div>
           <div className="pricing-grid">
@@ -226,18 +226,15 @@ export default function Home() {
                 name: "Plus",
                 price: "2,50 €",
                 text: "Pour aller un peu plus loin",
-                items: [
-                  "Tout le forfait Free",
-                  "Méthodes de révision enrichies",
-                ],
+                items: ["Tout le forfait Free", "Cartes et révisions Leitner"],
               },
               {
                 name: "Pro",
                 price: "5 €",
                 text: "Pour organiser ta réussite",
                 items: [
-                  "Tout le futur forfait Plus",
-                  "Planning et rappels prévus",
+                  "Tout le forfait Plus",
+                  "Planning et rappels facultatifs",
                 ],
               },
             ].map((p, i) => (
@@ -252,7 +249,7 @@ export default function Home() {
                       ? "Disponible"
                       : i === 1
                         ? "Pour progresser"
-                        : "À venir"}
+                        : "Pour s’organiser"}
                   </Badge>
                 </div>
                 <p>{p.text}</p>
@@ -273,8 +270,8 @@ export default function Home() {
                     <Link href="/inscription">Créer mon compte FREE</Link>
                   </Button>
                 ) : (
-                  <Button variant={i === 1 ? "default" : "outline"} disabled>
-                    Disponible prochainement
+                  <Button asChild variant={i === 1 ? "default" : "outline"}>
+                    <Link href="/app/abonnement">Découvrir {p.name}</Link>
                   </Button>
                 )}
               </Card>
@@ -296,10 +293,12 @@ export default function Home() {
       </main>
       <footer className="container footer">
         <Brand />
-        <p>© 2026 Revynora · MVP pédagogique local</p>
+        <p>© 2026 Revynora · Produit SaaS local</p>
         <div>
+          <Link href="/confidentialite">Confidentialité</Link>
+          <Link href="/conditions">Conditions</Link>
           <Link href="/design-system">Design system</Link>
-          <Link href="/admin">Prototype administration</Link>
+          <Link href="/admin">Administration</Link>
         </div>
         <small>
           Mentions légales et confidentialité : à compléter avant toute

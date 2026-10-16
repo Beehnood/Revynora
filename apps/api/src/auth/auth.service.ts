@@ -1,3 +1,4 @@
+import { GetEntitlements } from "../billing/application/billing.use-cases";
 import { Inject, Injectable } from "@nestjs/common";
 import { createHash, randomBytes } from "node:crypto";
 import type { Request, Response } from "express";
@@ -12,6 +13,9 @@ export const publicUser = {
   role: true,
   plan: true,
   createdAt: true,
+  disabledAt: true,
+  timeZone: true,
+  remindersEnabled: true,
 } as const;
 export const COOKIE = "revynora_session";
 const digest = (value: string) =>
@@ -21,12 +25,15 @@ export type Student = {
   name: string;
   email: string;
   role: "STUDENT" | "ADMIN";
-  plan: "FREE";
+  plan: "FREE" | "PLUS" | "PRO";
 };
 export type AuthRequest = Request & { student: Student };
 @Injectable()
 export class AuthService {
-  constructor(@Inject(DatabaseService) private readonly db: DatabaseService) {}
+  constructor(
+    @Inject(DatabaseService) private readonly db: DatabaseService,
+    @Inject(GetEntitlements) private readonly access: GetEntitlements,
+  ) {}
   private readonly env = loadEnvironment();
   private readonly limits = new Map<string, { count: number; reset: number }>();
   limit(request: Request) {
@@ -90,6 +97,15 @@ export class AuthService {
             expiresAt: new Date(Date.now() + maxAge),
           },
         },
+        termsAcceptedAt: new Date(),
+        emails: {
+          create: {
+            kind: "WELCOME",
+            subject: "Bienvenue dans Revynora",
+            body: "Ton espace personnel est prêt. Commence par un diagnostic ou retrouve tes cours.",
+            idempotencyKey: "welcome_" + digest(token),
+          },
+        },
         role: "STUDENT",
         plan: "FREE",
       },
@@ -111,7 +127,7 @@ export class AuthService {
       data.password,
       user?.passwordHash ?? DUMMY_HASH,
     );
-    if (!user || !valid)
+    if (!user || !valid || user.disabledAt)
       throw new ApiError(
         401,
         "AUTH_INVALID",
@@ -142,13 +158,20 @@ export class AuthService {
       where: { tokenHash: digest(token) },
       include: { user: { select: publicUser } },
     });
-    if (!session || session.expiresAt.getTime() < Date.now())
+    if (
+      !session ||
+      session.user.disabledAt ||
+      session.expiresAt.getTime() < Date.now()
+    )
       throw new ApiError(
         401,
         "AUTH_REQUIRED",
         "Votre session a expiré. Reconnectez-vous.",
       );
-    return session.user;
+    return {
+      ...session.user,
+      plan: (await this.access.execute(session.user.id)).plan,
+    };
   }
   async logout(request: Request, response: Response) {
     const token = this.token(request);

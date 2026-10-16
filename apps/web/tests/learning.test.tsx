@@ -157,6 +157,7 @@ describe("Parcours pédagogique Web", () => {
       "aria-invalid",
       "true",
     );
+    fireEvent.click(screen.getByRole("checkbox"));
     fireEvent.change(screen.getByLabelText("Prénom"), {
       target: { value: "Emma" },
     });

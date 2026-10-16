@@ -29,7 +29,9 @@ describe("Navigation et fondations", () => {
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent(
       "Apprends mieux",
     );
-    expect(screen.getAllByText("Disponible prochainement")).toHaveLength(2);
+    expect(
+      screen.getByRole("link", { name: "Découvrir Plus" }),
+    ).toHaveAttribute("href", "/app/abonnement");
     expect(
       screen.getAllByRole("link", { name: "Créer mon compte gratuit" })[0],
     ).toHaveAttribute("href", "/inscription");

@@ -54,7 +54,10 @@ export function AuthForm({ register = false }: { register?: boolean }) {
             e.preventDefault();
             if (busy) return;
             setError("");
-            const values = Object.fromEntries(new FormData(e.currentTarget));
+            const values: Record<string, unknown> = Object.fromEntries(
+              new FormData(e.currentTarget),
+            );
+            if (register) values.termsAccepted = values.termsAccepted === "on";
             const parsed = (register ? registerSchema : loginSchema).safeParse(
               values,
             );
@@ -148,6 +151,18 @@ export function AuthForm({ register = false }: { register?: boolean }) {
               12 caractères minimum. Utilise un mot de passe unique.
             </small>
           </FormField>
+          {register && (
+            <div>
+              <label>
+                <input type="checkbox" name="termsAccepted" /> J’accepte les{" "}
+                <Link href="/conditions">conditions d’utilisation</Link> et j’ai
+                lu la <Link href="/confidentialite">confidentialité</Link>.
+              </label>
+              {errors.termsAccepted && (
+                <p role="alert">{errors.termsAccepted}</p>
+              )}
+            </div>
+          )}
           {error && <Alert role="alert">{error}</Alert>}
           {success && (
             <Alert>Connexion réussie. Ouverture de ton espace…</Alert>

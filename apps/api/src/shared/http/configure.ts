@@ -15,7 +15,7 @@ export function configureApp(app: INestApplication) {
   app.enableCors({
     origin: [...origins],
     credentials: true,
-    methods: ["GET", "POST", "PUT"],
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     allowedHeaders: ["Content-Type", "X-Revynora-Client"],
   });
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -23,6 +23,7 @@ export function configureApp(app: INestApplication) {
     res.setHeader("X-Content-Type-Options", "nosniff");
     if (
       !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
+      !(req.method === "POST" && req.path === "/api/v1/webhooks/stripe") &&
       (req.headers["x-revynora-client"] !== "web" ||
         (req.headers.origin && !origins.has(req.headers.origin)))
     ) {
@@ -38,11 +39,11 @@ export function configureApp(app: INestApplication) {
   app.useGlobalFilters(new ApiExceptionFilter());
   app.enableShutdownHooks();
   const config = new DocumentBuilder()
-    .setTitle("Revynora · MVP pédagogique")
+    .setTitle("Revynora · Produit SaaS Web")
     .setDescription(
-      "API Phase 1. Sessions HttpOnly ; POST/PUT requièrent X-Revynora-Client: web. Aucune solution avant soumission. Les erreurs ont la forme {code,message,details?,requestId}.",
+      "API Phase 2. Sessions HttpOnly ; mutations requièrent X-Revynora-Client: web, sauf webhook Stripe signé sur corps brut. Aucune solution avant soumission. Les erreurs ont la forme {code,message,details?,requestId}.",
     )
-    .setVersion("1.0.0")
+    .setVersion("2.0.0")
     .addCookieAuth("revynora_session")
     .build();
   const document = completeOpenApi(SwaggerModule.createDocument(app, config));

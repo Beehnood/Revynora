@@ -1,3 +1,4 @@
+import { DomainError } from "../domain/errors";
 import {
   Catch,
   HttpException,
@@ -45,7 +46,14 @@ export class ApiExceptionFilter implements ExceptionFilter {
       code: "INTERNAL",
       message: "Le service est temporairement indisponible.",
     };
-    if (error instanceof ApiError) {
+    if (error instanceof DomainError) {
+      status = error.status;
+      body = {
+        code: error.code,
+        message: error.message,
+        details: error.details,
+      };
+    } else if (error instanceof ApiError) {
       status = error.getStatus();
       body = error.getResponse() as typeof body;
     } else if (error instanceof ZodError) {

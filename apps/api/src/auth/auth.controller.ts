@@ -12,7 +12,7 @@ import { ApiTags, ApiBody, ApiCookieAuth } from "@nestjs/swagger";
 import type { Request, Response } from "express";
 import { registerSchema, loginSchema } from "@revynora/validation";
 import { AuthService, type AuthRequest } from "./auth.service";
-import { StudentGuard } from "./student.guard";
+import { SessionGuard } from "./session.guard";
 import { parse } from "../shared/http/errors";
 @ApiTags("Authentification")
 @Controller("auth")
@@ -22,8 +22,9 @@ export class AuthController {
   @ApiBody({
     schema: {
       type: "object",
-      required: ["name", "email", "password"],
+      required: ["name", "email", "password", "termsAccepted"],
       properties: {
+        termsAccepted: { type: "boolean", enum: [true] },
         name: { type: "string" },
         email: { type: "string", format: "email" },
         password: { type: "string", minLength: 12, maxLength: 128 },
@@ -64,7 +65,7 @@ export class AuthController {
 }
 @ApiTags("Profil")
 @ApiCookieAuth()
-@UseGuards(StudentGuard)
+@UseGuards(SessionGuard)
 @Controller("users")
 export class UsersController {
   @Get("me") me(@Req() req: AuthRequest) {

@@ -1,4 +1,5 @@
 "use client";
+import { PrivacyControls } from "../saas/privacy-controls";
 import { useStudent } from "./student-shell";
 import { Badge, Card, PageHeader } from "../ui";
 export function ProfileView() {
@@ -7,12 +8,12 @@ export function ProfileView() {
     <>
       <PageHeader
         title="Mon profil étudiant"
-        description="Un compte gratuit, un espace privé pour apprendre."
+        description="Un espace privé pour apprendre."
       />
       <Card>
         <div className="card-heading">
           <h2>{user.name}</h2>
-          <Badge>FREE · Actif</Badge>
+          <Badge>{user.plan} · Actif</Badge>
         </div>
         <dl className="profile-details">
           <dt>Adresse e-mail</dt>
@@ -26,11 +27,8 @@ export function ProfileView() {
             })}
           </dd>
         </dl>
-        <p>
-          Le changement de forfait, la modification du profil et la gestion
-          avancée du compte ne font pas partie de cette phase.
-        </p>
       </Card>
+      <PrivacyControls />
     </>
   );
 }

@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     template: "%s | Revynora",
   },
   description:
-    "Découvrez le futur copilote éducatif Revynora : tester, apprendre, mémoriser et organiser ses études.",
+    "Revynora : diagnostics, cours personnalisés, révisions Leitner et planning pour apprendre et mémoriser durablement.",
   icons: { icon: "/brand/logo-mark.svg", apple: "/brand/app-icon.svg" },
 };
 export default function RootLayout({

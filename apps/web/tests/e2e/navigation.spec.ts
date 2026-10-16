@@ -5,7 +5,7 @@ async function capture(page: Page, name: string) {
   const width = page.viewportSize()?.width;
   if (width === 375 || width === 1280)
     await page.screenshot({
-      path: `../../docs/phase1/${name}-${width}.png`,
+      path: `../../docs/phase2/regression-${name}-${width}.png`,
       fullPage: true,
     });
 }
@@ -16,6 +16,7 @@ async function signup(page: Page) {
   await page.getByLabel("Prénom").fill("Emma");
   await page.getByLabel("Adresse e-mail").fill(email);
   await page.getByLabel("Mot de passe", { exact: true }).fill(password);
+  await page.getByRole("checkbox").check();
   await page
     .getByRole("button", { name: "Créer mon compte gratuit", exact: true })
     .click();
@@ -43,7 +44,8 @@ for (const width of [320, 375, 768, 1280]) {
       "/",
       "/connexion",
       "/inscription",
-      "/admin",
+      "/conditions",
+      "/confidentialite",
       "/design-system",
     ]) {
       await page.goto(route);
@@ -124,7 +126,7 @@ for (const width of [320, 375, 768, 1280]) {
     await audit(page);
     if (width === 1280 || width === 375)
       await page.screenshot({
-        path: `../../docs/phase1/resultat-${width}.png`,
+        path: `../../docs/phase2/regression-resultat-${width}.png`,
         fullPage: true,
       });
     await page.goto("/app/historique");

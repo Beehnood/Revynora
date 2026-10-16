@@ -5,7 +5,9 @@ import { loadEnvironment } from "./shared/config/environment";
 import { configureApp } from "./shared/http/configure";
 async function bootstrap() {
   const env = loadEnvironment();
-  const app = configureApp(await NestFactory.create(AppModule));
+  const app = configureApp(
+    await NestFactory.create(AppModule, { rawBody: true }),
+  );
   await app.listen(env.PORT, "127.0.0.1");
 }
 bootstrap().catch(() => {

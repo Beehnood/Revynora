@@ -6,7 +6,7 @@ export type UserProfile = {
   name: string;
   email: string;
   role: "STUDENT" | "ADMIN";
-  plan: "FREE";
+  plan: "FREE" | "PLUS" | "PRO";
   createdAt: string;
 };
 export type QuizQuestion = {
