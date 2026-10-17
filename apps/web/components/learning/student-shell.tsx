@@ -16,7 +16,7 @@ import {
   CalendarDays,
   ArrowUpRight,
 } from "../icons";
-import { History, LogOut } from "lucide-react";
+import { History, LogOut, TrendingUp } from "lucide-react";
 import { Badge, Alert } from "../ui";
 import { api, message } from "@/lib/api";
 const UserContext = createContext<UserProfile | null>(null);
@@ -31,6 +31,7 @@ const links = [
   { name: "Mes tests", href: "/app/historique", icon: History },
   { name: "Mes cours", href: "/app/cours", icon: BookOpen },
   { name: "Révisions", href: "/app/revisions", icon: Repeat2 },
+  { name: "Progression", href: "/app/progression", icon: TrendingUp },
   { name: "Planning", href: "/app/planning", icon: CalendarDays },
   { name: "Abonnement", href: "/app/abonnement", icon: GraduationCap },
   { name: "Notifications", href: "/app/notifications", icon: Settings },
@@ -141,7 +142,7 @@ export function StudentShell({
             {error && <Alert role="alert">{error}</Alert>}
             {children}
             <p className="dashboard-footnote">
-              Revynora · Ton espace d’apprentissage privé · Phase 2
+              Revynora · Ton espace d’apprentissage privé
             </p>
           </main>
         </div>

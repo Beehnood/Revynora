@@ -1,0 +1,142 @@
+{
+  "date": "2026-10-17",
+  "tests": {
+    "apiUnit": 36,
+    "apiIntegration": 30,
+    "web": 43,
+    "admin": 10,
+    "apiClient": 3,
+    "e2e": 17,
+    "distinctTotal": 139
+  },
+  "coverage": {
+    "web": {
+      "lines": {
+        "total": 3766,
+        "covered": 3674,
+        "skipped": 0,
+        "pct": 97.55
+      },
+      "statements": {
+        "total": 3766,
+        "covered": 3674,
+        "skipped": 0,
+        "pct": 97.55
+      },
+      "functions": {
+        "total": 138,
+        "covered": 122,
+        "skipped": 0,
+        "pct": 88.4
+      },
+      "branches": {
+        "total": 748,
+        "covered": 680,
+        "skipped": 0,
+        "pct": 90.9
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "api": {
+      "lines": {
+        "total": 4873,
+        "covered": 4617,
+        "skipped": 0,
+        "pct": 94.74
+      },
+      "statements": {
+        "total": 4873,
+        "covered": 4617,
+        "skipped": 0,
+        "pct": 94.74
+      },
+      "functions": {
+        "total": 291,
+        "covered": 285,
+        "skipped": 0,
+        "pct": 97.93
+      },
+      "branches": {
+        "total": 979,
+        "covered": 848,
+        "skipped": 0,
+        "pct": 86.61
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "admin": {
+      "lines": {
+        "total": 363,
+        "covered": 357,
+        "skipped": 0,
+        "pct": 98.34
+      },
+      "statements": {
+        "total": 363,
+        "covered": 357,
+        "skipped": 0,
+        "pct": 98.34
+      },
+      "functions": {
+        "total": 12,
+        "covered": 11,
+        "skipped": 0,
+        "pct": 91.66
+      },
+      "branches": {
+        "total": 73,
+        "covered": 68,
+        "skipped": 0,
+        "pct": 93.15
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "api-client": {
+      "lines": {
+        "total": 67,
+        "covered": 67,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 67,
+        "covered": 67,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 22,
+        "covered": 19,
+        "skipped": 0,
+        "pct": 86.36
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    }
+  }
+}

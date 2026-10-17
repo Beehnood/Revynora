@@ -1,5 +1,5 @@
 import { DomainError } from "../../shared/domain/errors";
-export const DEFAULT_LEITNER_INTERVALS: readonly number[] = [1, 2, 4, 8, 16];
+export const DEFAULT_LEITNER_INTERVALS: readonly number[] = [1, 3, 7, 14, 30];
 export function scheduleReview(
   box: number,
   remembered: boolean,
@@ -29,7 +29,11 @@ export function scheduleReview(
     nextDueAt: new Date(now.getTime() + intervals[next - 1]! * 86400000),
   };
 }
-export type CardInput = { front: string; back: string; courseId?: string };
+export type CardInput = {
+  front: string;
+  back: string;
+  courseId?: string | null;
+};
 export interface CardRepository {
   list(
     userId: string,
@@ -48,7 +52,12 @@ export interface CardRepository {
   review(
     userId: string,
     id: string,
-    input: { requestId: string; version: number; remembered: boolean },
+    input: {
+      requestId: string;
+      version: number;
+      remembered: boolean;
+      durationSeconds?: number;
+    },
   ): Promise<unknown>;
   stats(userId: string): Promise<unknown>;
 }

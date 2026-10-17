@@ -31,7 +31,7 @@ export class PrismaCardRepository implements CardRepository {
   private async course(
     tx: Prisma.TransactionClient,
     userId: string,
-    id?: string,
+    id?: string | null,
   ) {
     if (!id) return;
     const c = await tx.course.findFirst({
@@ -79,7 +79,12 @@ export class PrismaCardRepository implements CardRepository {
   review(
     userId: string,
     id: string,
-    input: { requestId: string; version: number; remembered: boolean },
+    input: {
+      requestId: string;
+      version: number;
+      remembered: boolean;
+      durationSeconds?: number;
+    },
   ) {
     return this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "LeitnerCard" WHERE id=${id} AND "userId"=${userId} FOR UPDATE`;
@@ -136,6 +141,7 @@ export class PrismaCardRepository implements CardRepository {
           courseId: card.courseId,
           requestId: input.requestId,
           remembered: input.remembered,
+          durationSeconds: input.durationSeconds,
           fromBox: card.box,
           ...next,
         },
@@ -160,6 +166,12 @@ export class PrismaCardRepository implements CardRepository {
         take: 20,
       }),
     ]);
-    return { boxes, due, totalReviews: total, recent };
+    return {
+      boxes,
+      due,
+      totalReviews: total,
+      recent,
+      intervals: this.intervals,
+    };
   }
 }

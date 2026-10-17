@@ -1,3 +1,4 @@
+import { completePhase3OpenApi } from "./phase3-openapi";
 import { completeSaasOpenApi } from "./saas-openapi";
 import type {
   OpenAPIObject,
@@ -199,5 +200,5 @@ export function completeOpenApi(doc: OpenAPIObject) {
       }
     }
   }
-  return completeSaasOpenApi(doc);
+  return completePhase3OpenApi(completeSaasOpenApi(doc));
 }

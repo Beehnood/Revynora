@@ -257,6 +257,9 @@ describe("Écrans SaaS", () => {
       screen.getByRole("button", { name: "Revenir à mes cartes" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Archiver" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmer l’archivage" }),
+    );
     await waitFor(() =>
       expect(api).toHaveBeenCalledWith("/leitner/cards/card", {
         method: "DELETE",

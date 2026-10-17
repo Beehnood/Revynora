@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Put,
   Query,
   Req,
   UseGuards,
@@ -15,10 +16,12 @@ import { StudentGuard } from "../../auth/student.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { PlanningUseCases } from "../application/planning.use-cases";
-const title = z.string().trim().min(1).max(160),
-  local = z.string().regex(/^\d{4}-\d\d-\d\dT\d\d:\d\d$/),
-  duration = z.number().int().min(15).max(180),
-  reminder = z.number().int().min(5).max(1440).nullable();
+import {
+  planSchema,
+  patchTaskSchema,
+  availabilitySchema,
+} from "@revynora/validation";
+import { localInstant } from "../infrastructure/prisma-plan.repository";
 @Controller()
 @UseGuards(StudentGuard)
 export class PlanningController {
@@ -38,32 +41,7 @@ export class PlanningController {
     @Req() r: AuthRequest,
     @Body() b: unknown,
   ) {
-    return this.use.generate(
-      r.student.id,
-      parse(
-        z
-          .object({
-            title,
-            timeZone: z.string().min(1).max(100),
-            resolveConflicts: z.boolean().default(false),
-            tasks: z
-              .array(
-                z
-                  .object({
-                    title,
-                    localStart: local,
-                    durationMinutes: duration,
-                    reminderMinutes: reminder.default(null),
-                  })
-                  .strict(),
-              )
-              .min(1)
-              .max(20),
-          })
-          .strict(),
-        b,
-      ),
-    );
+    return this.use.generate(r.student.id, parse(planSchema, b));
   }
   @Get("study-plan-items/:id/history") history(
     @Req() r: AuthRequest,
@@ -84,20 +62,37 @@ export class PlanningController {
     return this.use.edit(
       r.student.id,
       parse(z.string().uuid(), id),
-      parse(
-        z
-          .object({
-            version: z.number().int().min(0),
-            title: title.optional(),
-            localStart: local.optional(),
-            durationMinutes: duration.optional(),
-            reminderMinutes: reminder.optional(),
-            status: z.enum(["PLANNED", "DONE", "CANCELLED"]).optional(),
-            resolveConflicts: z.boolean().default(false),
-          })
-          .strict(),
-        b,
-      ),
+      parse(patchTaskSchema, b),
+    );
+  }
+  @Patch("study-plans/:id") rename(
+    @Req() r: AuthRequest,
+    @Param("id") id: string,
+    @Body() b: unknown,
+  ) {
+    const input = parse(
+      z.object({ title: z.string().trim().min(1).max(160) }).strict(),
+      b,
+    );
+    return this.use.rename(r.student.id, parse(z.uuid(), id), input.title);
+  }
+  @Get("study-availability") availability(@Req() r: AuthRequest) {
+    return this.use.availability(r.student.id);
+  }
+  @Put("study-availability") saveAvailability(
+    @Req() r: AuthRequest,
+    @Body() b: unknown,
+  ) {
+    const input = parse(availabilitySchema, b);
+    return this.use.saveAvailability(
+      r.student.id,
+      input.slots.map((slot) => {
+        const startsAt = localInstant(slot.localStart, input.timeZone);
+        return {
+          startsAt,
+          endsAt: new Date(+startsAt + slot.durationMinutes * 60000),
+        };
+      }),
     );
   }
 }

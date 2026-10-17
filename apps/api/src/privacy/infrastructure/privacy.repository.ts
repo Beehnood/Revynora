@@ -57,6 +57,7 @@ export class PrismaPrivacyRepository implements PrivacyRepository {
         paymentEvents: true,
         leitnerCards: true,
         revisions: true,
+        availability: true,
         studyPlans: {
           include: {
             items: { include: { versions: { orderBy: { version: "asc" } } } },

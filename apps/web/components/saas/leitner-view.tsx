@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { api, message } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
@@ -11,17 +11,18 @@ import {
   FormField,
   Textarea,
   LoadingState,
+  Select,
 } from "../ui";
 import { Button } from "../ui/button";
-type Flashcard = {
-  id: string;
-  front: string;
-  back: string;
-  box: number;
-  version: number;
-  dueAt: string;
-};
+import type { LeitnerCardView as Flashcard } from "@revynora/types";
 export function LeitnerView() {
+  const startedAt = useRef(0);
+  const requestId = useRef<string | null>(null);
+  const [courseId, setCourseId] = useState("");
+  const courses = useResource<{ items: { id: string; title: string }[] }>(
+    "/courses?pageSize=20",
+  );
+  const [archiving, setArchiving] = useState<string | null>(null);
   const [page, setPage] = useState(1);
   const cards = useResource<{ items: Flashcard[]; total: number }>(
       page === 1 ? "/leitner/cards" : "/leitner/cards?page=" + page,
@@ -32,6 +33,7 @@ export function LeitnerView() {
   const stats = useResource<{
     boxes: { box: number; _count: number }[];
     totalReviews: number;
+    intervals?: number[];
     recent: { id: string; remembered: boolean; createdAt: string }[];
   }>("/leitner/stats");
   const [editing, setEditing] = useState<Flashcard | null>(null);
@@ -51,10 +53,17 @@ export function LeitnerView() {
         method: "POST",
         body: JSON.stringify({
           version: card.version,
-          requestId: crypto.randomUUID(),
+          requestId:
+            requestId.current ?? (requestId.current = crypto.randomUUID()),
+          durationSeconds: Math.min(
+            3600,
+            Math.max(0, Math.round((Date.now() - startedAt.current) / 1000)),
+          ),
           remembered,
         }),
       });
+      requestId.current = null;
+      startedAt.current = Date.now();
       setIndex((i) => i + 1);
       setFlipped(false);
       due.reload();
@@ -115,6 +124,8 @@ export function LeitnerView() {
                 <Button
                   disabled={!due.data?.items.length}
                   onClick={() => {
+                    startedAt.current = Date.now();
+                    requestId.current = null;
                     setSession(due.data!.items);
                     setIndex(0);
                     setFlipped(false);
@@ -128,6 +139,11 @@ export function LeitnerView() {
                 <Badge>
                   Carte {index + 1}/{session.length} · Boîte {card.box}
                 </Badge>
+                <progress
+                  aria-label="Progression de la séance"
+                  value={index}
+                  max={session.length}
+                />
                 <h2>{card.front}</h2>
                 {flipped ? (
                   <>
@@ -180,6 +196,7 @@ export function LeitnerView() {
                       body: JSON.stringify({
                         front,
                         back,
+                        courseId: courseId || null,
                         ...(editing ? { version: editing.version } : {}),
                       }),
                     },
@@ -189,6 +206,7 @@ export function LeitnerView() {
                   setBack("");
                   cards.reload();
                   due.reload();
+                  stats.reload();
                 } catch (e) {
                   setError(message(e));
                 } finally {
@@ -213,6 +231,20 @@ export function LeitnerView() {
                   value={back}
                   onChange={(e) => setBack(e.target.value)}
                 />
+              </FormField>
+              <FormField id="card-course" label="Matière de la carte">
+                <Select
+                  id="card-course"
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                >
+                  <option value="">Sans cours associé</option>
+                  {courses.data?.items.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </Select>
               </FormField>
               <div className="saas-actions">
                 <Button disabled={busy}>
@@ -242,6 +274,10 @@ export function LeitnerView() {
                 {[1, 2, 3, 4, 5].map((box) => (
                   <div key={box}>
                     <Badge>Boîte {box}</Badge>
+                    <small>
+                      {(stats.data!.intervals ?? [1, 3, 7, 14, 30])[box - 1]}{" "}
+                      jours
+                    </small>
                     <strong>
                       {stats.data!.boxes.find((b) => b.box === box)?._count ??
                         0}
@@ -276,6 +312,7 @@ export function LeitnerView() {
                   variant="outline"
                   disabled={busy || !!session}
                   onClick={() => {
+                    setCourseId(c.courseId ?? "");
                     setEditing(c);
                     setFront(c.front);
                     setBack(c.back);
@@ -287,12 +324,37 @@ export function LeitnerView() {
                 <Button
                   variant="outline"
                   disabled={busy}
+                  onClick={() => setArchiving(c.id)}
+                >
+                  Archiver
+                </Button>
+              </div>
+            ))}
+            {archiving && (
+              <div
+                role="alertdialog"
+                aria-modal="false"
+                aria-labelledby="archive-title"
+                className="card"
+              >
+                <h3 id="archive-title">Archiver cette carte ?</h3>
+                <p>
+                  Elle quittera les prochaines séances. Son historique sera
+                  conservé.
+                </p>
+                <Button
+                  disabled={busy}
                   onClick={async () => {
                     setBusy(true);
+                    setError("");
                     try {
-                      await api("/leitner/cards/" + c.id, { method: "DELETE" });
+                      await api("/leitner/cards/" + archiving, {
+                        method: "DELETE",
+                      });
+                      setArchiving(null);
                       cards.reload();
                       due.reload();
+                      stats.reload();
                     } catch (e) {
                       setError(message(e));
                     } finally {
@@ -300,10 +362,13 @@ export function LeitnerView() {
                     }
                   }}
                 >
-                  Archiver
+                  Confirmer l’archivage
+                </Button>
+                <Button variant="outline" onClick={() => setArchiving(null)}>
+                  Conserver la carte
                 </Button>
               </div>
-            ))}
+            )}
             {cards.data.total > 100 && (
               <div className="saas-actions">
                 <Button

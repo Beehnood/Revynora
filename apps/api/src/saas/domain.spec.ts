@@ -25,10 +25,10 @@ const p = (
 describe("Règles SaaS", () => {
   it("intervalles Leitner configurables, valeurs par défaut et rejet des paramètres invalides", () => {
     expect(scheduleReview(3, true, now).nextDueAt).toEqual(
-      new Date(+now + 8 * 86400000),
+      new Date(+now + 14 * 86400000),
     );
     expect(scheduleReview(4, true, now).nextDueAt).toEqual(
-      new Date(+now + 16 * 86400000),
+      new Date(+now + 30 * 86400000),
     );
     expect(scheduleReview(2, true, now, [1, 3, 6, 12, 24]).nextDueAt).toEqual(
       new Date(+now + 6 * 86400000),
@@ -94,6 +94,7 @@ describe("Règles SaaS", () => {
       "notifications",
       "admin",
       "privacy",
+      "progress",
     ])
       for (const layer of ["domain", "application"]) {
         const dir = join(process.cwd(), "src", module, layer);

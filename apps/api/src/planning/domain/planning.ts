@@ -30,6 +30,9 @@ export type TaskInput = {
   localStart: string;
   durationMinutes: number;
   reminderMinutes: number | null;
+  courseId?: string | null;
+  kind?: "REVISION" | "EXAM";
+  priority?: number;
 };
 export type GenerateInput = {
   title: string;
@@ -44,11 +47,23 @@ export type PatchInput = {
   status?: "PLANNED" | "DONE" | "CANCELLED";
   title?: string;
   reminderMinutes?: number | null;
+  courseId?: string | null;
+  kind?: "REVISION" | "EXAM";
+  priority?: number;
   resolveConflicts: boolean;
 };
 export interface PlanRepository {
+  rename(user: string, id: string, title: string): Promise<unknown>;
+  availability(
+    user: string,
+  ): Promise<{ id: string; startsAt: Date; endsAt: Date }[]>;
+  saveAvailability(user: string, slots: Slot[]): Promise<unknown>;
   history(user: string, id: string, page: number): Promise<unknown>;
   list(user: string, from: Date, to: Date): Promise<unknown>;
-  generate(user: string, input: GenerateInput): Promise<unknown>;
+  generate(
+    user: string,
+    input: GenerateInput,
+    options?: { requestId: string; hash: string },
+  ): Promise<unknown>;
   edit(user: string, id: string, input: PatchInput): Promise<unknown>;
 }

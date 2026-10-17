@@ -58,6 +58,7 @@ model User {
   leitnerCards LeitnerCard[]
   revisions Revision[]
   studyPlans StudyPlan[]
+  availability StudyAvailability[]
   emails EmailMessage[]
   auditActions AuditLog[] @relation("AuditActor")
 }
@@ -83,6 +84,7 @@ model Course {
   quizzes Quiz[]
   cards LeitnerCard[]
   revisions Revision[]
+  planItems StudyPlanItem[]
   @@index([ownerId, createdAt])
 }
 model Quiz {
@@ -285,6 +287,7 @@ model Revision {
   courseId String?
   course Course? @relation(fields:[courseId],references:[id],onDelete:SetNull)
   requestId String @unique
+  durationSeconds Int?
   remembered Boolean
   fromBox Int
   toBox Int
@@ -299,6 +302,8 @@ model StudyPlan {
   title String
   timeZone String
   createdAt DateTime @default(now())
+  generationKey String? @unique
+  generationHash String?
   items StudyPlanItem[]
   @@index([userId, createdAt])
 }
@@ -307,6 +312,10 @@ model StudyPlanItem {
   planId String
   plan StudyPlan @relation(fields:[planId],references:[id],onDelete:Cascade)
   title String
+  courseId String?
+  course Course? @relation(fields:[courseId],references:[id],onDelete:SetNull)
+  kind String @default("REVISION")
+  priority Int @default(2)
   startsAt DateTime
   endsAt DateTime
   status TaskStatus @default(PLANNED)
@@ -315,6 +324,7 @@ model StudyPlanItem {
   createdAt DateTime @default(now())
   versions StudyPlanItemVersion[]
   @@index([startsAt])
+  @@index([planId, startsAt])
 }
 model EmailMessage {
   id String @id @default(uuid())
@@ -367,6 +377,18 @@ model StudyPlanItemVersion {
  endsAt DateTime
  status TaskStatus
  reminderMinutes Int?
+ courseId String?
+ kind String @default("REVISION")
+ priority Int @default(2)
  recordedAt DateTime @default(now())
  @@unique([itemId,version])
+}
+
+model StudyAvailability {
+ id String @id @default(uuid())
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ startsAt DateTime
+ endsAt DateTime
+ @@index([userId, startsAt])
 }

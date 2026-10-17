@@ -12,6 +12,7 @@ export default defineConfig({
         "src/billing/**/*.ts",
         "src/leitner/**/*.ts",
         "src/planning/**/*.ts",
+        "src/progress/**/*.ts",
         "src/notifications/**/*.ts",
         "src/admin/**/*.ts",
         "src/privacy/**/*.ts",

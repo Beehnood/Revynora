@@ -24,7 +24,12 @@ export class LeitnerUseCases {
   async review(
     user: string,
     id: string,
-    input: { requestId: string; version: number; remembered: boolean },
+    input: {
+      requestId: string;
+      version: number;
+      remembered: boolean;
+      durationSeconds?: number;
+    },
   ) {
     await this.access.require(user, "PLUS");
     return this.repo.review(user, id, input);

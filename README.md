@@ -1,6 +1,6 @@
-# Revynora · Monorepo modulaire — Phase 2.5
+# Revynora · Phase 3 — Leitner, Planning et Progression
 
-Phases 0, 1 et 2 conservées ; séparation structurelle Phase 2.5, d’après les PDF et les références UI/UX fournis. Projet **local uniquement** : aucun hébergement ni déploiement ; paiements simulés ou Stripe test uniquement. L’identité livre ouvert et les tokens violets sont conservés.
+Phases 0, 1, 2 et réorganisation 2.5 conservées ; Phase 3 Web selon le périmètre explicitement demandé (Leitner, planning intelligent et progression). Projet **local uniquement** : aucun hébergement ni déploiement ; paiements simulés ou Stripe test uniquement. L’identité livre ouvert et les tokens violets sont conservés.
 
 ## Lancer l’application
 
@@ -25,6 +25,7 @@ pnpm dev
 - Abonnement et paiements de test : http://localhost:3000/app/abonnement
 - Révisions Leitner (Plus/Pro) : http://localhost:3000/app/revisions
 - Planning (Pro) : http://localhost:3000/app/planning
+- Progression (Free/Plus/Pro) : http://localhost:3000/app/progression
 - Notifications et consentement : http://localhost:3000/app/notifications
 - Administration indépendante : http://localhost:3002 (ancienne URL `/admin` conservée comme pont)
 - OpenAPI interactif : http://localhost:3001/api/v1/docs
@@ -35,7 +36,7 @@ Les serveurs doivent rester lancés pour que ces URL locales répondent. Utilise
 
 ## Applications indépendantes
 
-`pnpm dev` démarre Web, API et Admin. Le socle Expo est lancé séparément ; aucune fonctionnalité Phase 3 n’est développée.
+`pnpm dev` démarre Web, API et Admin. Le socle Expo est lancé séparément ; aucun écran mobile natif n’est développé dans cette Phase 3 Web.
 
 | Application   | Développement     | Build filtré        | Adresse locale                    |
 | ------------- | ----------------- | ------------------- | --------------------------------- |
@@ -46,7 +47,7 @@ Les serveurs doivent rester lancés pour que ces URL locales répondent. Utilise
 
 Les scripts filtrés construisent les packages nécessaires via Turbo. Pour utiliser une application seule, démarrer aussi l’API centrale ou configurer son URL distante. Les variables `API_URL`, `ADMIN_ORIGIN`, `NEXT_PUBLIC_WEB_ORIGIN` et `EXPO_PUBLIC_API_URL` sont décrites dans [.env.example](.env.example) et les README des applications. Fixer API_URL avant un build Next. Ne jamais copier de secrets serveur dans une variable publique Mobile/Web.
 
-La Phase 2.5 ne modifie ni Prisma ni ses migrations et ne réinitialise aucune base. Les commandes db:migrate du guide d’installation appliquent uniquement les migrations déjà présentes, à utiliser pour une première installation ou des migrations existantes préalablement vérifiées. Aucun déploiement n’est lancé.
+La Phase 2.5 a conservé Prisma. Cette Phase 3 ajoute deux migrations non destructives ; aucune ancienne migration ni seed n’est modifié. Les bases locales revynora et revynora_test sont à jour après recette. Aucune base réinitialisée ; aucun déploiement. Sauvegarder les données avant toute migration sur une autre installation.
 
 [Audit et bilan de réorganisation](docs/phase2.5/AUDIT.md) · [ADR 007](docs/adr/007-four-independent-apps.md) · [Admin](apps/admin/README.md) · [Mobile](apps/mobile/README.md) · [Client API](packages/api-client/README.md)
 
@@ -91,13 +92,13 @@ pnpm test:e2e
 
 `pnpm test:prepare` crée si nécessaire **revynora_test** et y applique les migrations sans modifier la base applicative. Le rôle local doit pouvoir créer une base. Un `TEST_DATABASE_URL` personnalisé doit pointer vers ce nom dédié. Les tests d’intégration utilisent un serveur HTTP éphémère et nettoient uniquement leurs utilisateurs. Playwright démarre l’API compilée sur 3001 avec cette base et Next sur 3000 ; arrêter `pnpm dev` avant cette recette. Un serveur existant n’est pas réutilisé afin de ne pas tester ou modifier une session réelle par erreur.
 
-La commande équivalente demandée par le PDF est `pnpm --filter @revynora/web exec playwright test`, après `pnpm test:prepare` et `pnpm build` ; le nom réel du workspace est `@revynora/web`. Les traces sont conservées en cas d’échec. La recette couvre 320, 375, 768 et 1280 px, navigation clavier et contrôles axe A/AA. Les captures sont enregistrées dans `docs/phase1` et `docs/phase2` à 375 et 1280 px. Les comptes Playwright préfixés `e2e-phase1-` ou `e2e-phase2-` sont nettoyés uniquement dans revynora_test.
+La commande équivalente demandée par le PDF est `pnpm --filter @revynora/web exec playwright test`, après `pnpm test:prepare` et `pnpm build` ; le nom réel du workspace est `@revynora/web`. Les traces sont conservées en cas d’échec. La recette couvre 320, 375, 768 et 1280 px, navigation clavier et contrôles axe A/AA. Les captures sont enregistrées dans `docs/phase1` et `docs/phase2` à 375 et 1280 px. Les comptes Playwright préfixés `e2e-phase1-`, `e2e-phase2-` ou `e2e-phase3-` sont nettoyés uniquement dans revynora_test.
 
 Rapports : `apps/web/coverage/index.html`, `apps/api/coverage/integration/index.html`, `apps/web/playwright-report/index.html`. La portée et les résultats exacts sont décrits dans [la recette Phase 2](docs/phase2/RECETTE.md). [La recette Phase 1](docs/phase1/RECETTE.md) est conservée comme historique. Le [rapport Phase 0](docs/RECETTE.md) reste un historique de cette phase et ne décrit pas les fonctionnalités actuelles.
 
 ## Architecture et sécurité
 
-Monorepo pnpm/Turborepo : `apps/web` (Next App Router, Tailwind, composants shadcn), `apps/api` (Nest modulaire Auth/Learning/AI/Health), `packages/types`, `packages/validation`, `packages/config`, `prisma`, `infra/docker`, `docs` et `.github/workflows`. TypeScript strict. Le workspace mobile contient uniquement le socle Expo et son écran d’attente ; les parcours natifs appartiennent à la Phase 3.
+Monorepo pnpm/Turborepo : `apps/web` (Next App Router, Tailwind, composants shadcn), `apps/api` (Nest modulaire Auth/Learning/AI/Health), `packages/types`, `packages/validation`, `packages/config`, `prisma`, `infra/docker`, `docs` et `.github/workflows`. TypeScript strict. Le workspace mobile contient uniquement le socle Expo et son écran d’attente ; les parcours natifs sont reportés à une phase ultérieure explicitement autorisée.
 
 Sessions opaques en cookie HttpOnly/SameSite=Lax, hash du jeton en DB, mots de passe scrypt salés et versionnés. Validation Zod stricte, guards de session, rôle et droits calculés depuis les périodes actives, contrôle de propriété, erreurs `{code,message,details?,requestId}`, limitation des tentatives d’authentification et quotas IA transactionnels. Les mutations requièrent `X-Revynora-Client: web` et une origine autorisée ; le Web appelle le proxy même origine `/api/v1`. La soumission et la sauvegarde sont sérialisées en DB : double soumission identique, modification tardive refusée.
 
@@ -130,3 +131,15 @@ pnpm admin:promote votre-compte@exemple.fr --confirm
 ```
 
 La commande révoque les sessions existantes et journalise l’attribution. Se reconnecter ensuite. Les informations légales publiques, durées de conservation et validations Stripe/SMTP distantes restent à compléter avant une ouverture publique. Cela ne bloque pas la recette locale demandée.
+
+## Phase 3 — Leitner, planning intelligent et progression
+
+[Audit](docs/phase3/AUDIT.md) · [Spécification retenue](docs/phase3/SPECIFICATION.md) · [Recette détaillée](docs/phase3/RECETTE.md) · [Fichiers](docs/phase3/FILES.md) · [ADR 008](docs/adr/008-intelligent-planning-and-progress.md).
+
+Plus/Pro : gestion et révision des flashcards, cinq boîtes, historique, durée déclarée et archivage confirmé. Intervalles par défaut **1,3,7,14,30 jours**, configurables via LEITNER_INTERVAL_DAYS côté API ; échéances antérieures conservées.
+
+Pro : calendrier semaine/mois/liste, cours, examens, priorités, statuts, déplacements, historique et disponibilités ponctuelles. Ajouter un cours et une disponibilité future, puis « Proposer un planning IA ». La proposition reste sans effet jusqu’à « Confirmer ce planning ». Les conflits sont revérifiés à la confirmation. Le mode mock est une simulation déterministe clairement signalée ; OpenAI réutilise la configuration serveur existante, le quota quotidien et les délais bornés. Aucun nouveau paiement ni droit actif n’est créé par le planning.
+
+Tous les étudiants : dashboard /app/progression avec scores, révisions, boîtes, matières et activité réelle. Les jours statistiques sont UTC ; les anciennes durées inconnues sont exclues du temps chronométré.
+
+Pour une installation déjà configurée : `pnpm install --frozen-lockfile`, `pnpm db:generate`, `pnpm db:migrate`, puis `pnpm dev`. Le seed du guide initial n’est nécessaire que pour initialiser le catalogue sur une base neuve. L’application reste locale.

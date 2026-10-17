@@ -24,7 +24,7 @@ const card = z
   .object({
     front: z.string().trim().min(1).max(1000),
     back: z.string().trim().min(1).max(4000),
-    courseId: z.string().uuid().optional(),
+    courseId: z.string().uuid().nullable().optional(),
   })
   .strict();
 @Controller("leitner")
@@ -78,6 +78,7 @@ export class LeitnerController {
             requestId: z.string().uuid(),
             version: z.number().int().min(0),
             remembered: z.boolean(),
+            durationSeconds: z.number().int().min(0).max(3600).optional(),
           })
           .strict(),
         b,

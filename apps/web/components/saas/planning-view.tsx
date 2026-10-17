@@ -1,6 +1,6 @@
 "use client";
 import { TaskHistory } from "./task-history";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { api, message } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
@@ -15,19 +15,23 @@ import {
   Badge,
 } from "../ui";
 import { Button } from "../ui/button";
-type Task = {
-  id: string;
-  title: string;
-  startsAt: string;
-  endsAt: string;
-  status: string;
-  version: number;
-  plan: { timeZone: string };
-};
+import type { PlanTask as Task } from "@revynora/types";
+import { PlanningAssistant } from "./planning-assistant";
 export function PlanningView() {
+  const [now, setNow] = useState(() => Date.now());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 60000);
+    return () => clearInterval(timer);
+  }, []);
   const [anchor, setAnchor] = useState(() =>
       new Date().toISOString().slice(0, 10),
     ),
+    [filter, setFilter] = useState(""),
+    [courseId, setCourseId] = useState(""),
+    [kind, setKind] = useState("REVISION"),
+    [priority, setPriority] = useState(2),
+    [renaming, setRenaming] = useState<Task | null>(null),
+    [planTitle, setPlanTitle] = useState(""),
     [editing, setEditing] = useState<Task | null>(null),
     [view, setView] = useState("week"),
     [zone, setZone] = useState("Europe/Paris"),
@@ -55,6 +59,11 @@ export function PlanningView() {
       "&to=" +
       new Date(+to + 86400000).toISOString(),
   );
+  const courses = useResource<{
+    items: { id: string; title: string; domain: string }[];
+  }>("/courses?pageSize=20");
+  const filtered =
+    tasks.data?.items.filter((t) => !filter || t.courseId === filter) ?? [];
   const zoneValid = (() => {
     try {
       new Intl.DateTimeFormat("fr", { timeZone: zone });
@@ -114,54 +123,85 @@ export function PlanningView() {
                 >
                   <option value="week">Semaine · 7 jours</option>
                   <option value="month">Mois civil</option>
+                  <option value="list">Liste</option>
+                </Select>
+              </FormField>
+              <FormField id="task-filter" label="Filtrer par cours">
+                <Select
+                  id="task-filter"
+                  value={filter}
+                  onChange={(e) => setFilter(e.target.value)}
+                >
+                  <option value="">Toutes les matières</option>
+                  {courses.data?.items.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.domain} · {c.title}
+                    </option>
+                  ))}
                 </Select>
               </FormField>
             </div>
-            <div className="calendar-grid" aria-label="Calendrier des séances">
-              {days.map((day) => {
-                const date = day.toISOString().slice(0, 10);
-                const daily = tasks.data!.items.filter(
-                  (t) =>
-                    new Date(t.startsAt).toLocaleDateString("sv-SE", {
-                      timeZone: zoneValid ? zone : "Europe/Paris",
-                    }) === date,
-                );
-                return (
-                  <div className="calendar-day" key={date}>
-                    <time dateTime={date}>
-                      {day.toLocaleDateString("fr-FR", {
-                        weekday: "short",
-                        day: "numeric",
-                        timeZone: "UTC",
-                      })}
-                    </time>
-                    {daily.map((t) => (
-                      <span
-                        key={t.id}
-                        className={
-                          t.status === "CANCELLED"
-                            ? "calendar-task cancelled"
-                            : "calendar-task"
-                        }
-                      >
-                        {t.title}
-                      </span>
-                    ))}
-                  </div>
-                );
-              })}
-            </div>
+            {view !== "list" && (
+              <div
+                className="calendar-grid"
+                aria-label="Calendrier des séances"
+              >
+                {days.map((day) => {
+                  const date = day.toISOString().slice(0, 10);
+                  const daily = filtered.filter(
+                    (t) =>
+                      new Date(t.startsAt).toLocaleDateString("sv-SE", {
+                        timeZone: zoneValid ? zone : "Europe/Paris",
+                      }) === date,
+                  );
+                  return (
+                    <div className="calendar-day" key={date}>
+                      <time dateTime={date}>
+                        {day.toLocaleDateString("fr-FR", {
+                          weekday: "short",
+                          day: "numeric",
+                          timeZone: "UTC",
+                        })}
+                      </time>
+                      {daily.map((t) => (
+                        <span
+                          key={t.id}
+                          className={
+                            t.status === "CANCELLED"
+                              ? "calendar-task cancelled"
+                              : "calendar-task"
+                          }
+                        >
+                          {t.kind === "EXAM" ? "Examen · " : ""}
+                          {t.title}
+                        </span>
+                      ))}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            {tasks.data.total > 500 && (
+              <Alert>
+                Affichage limité aux 500 premières séances. Réduis la période.
+              </Alert>
+            )}
             <div className="calendar-list">
-              {tasks.data.items.length === 0 && (
+              {filtered.length === 0 && (
                 <p>
                   Aucune séance sur cette période. Prépare ta prochaine révision
                   ci-dessous.
                 </p>
               )}
-              {tasks.data.items.map((t) => (
+              {filtered.map((t) => (
                 <article className="saas-row" key={t.id}>
                   <div>
                     <Badge>{t.status}</Badge>
+                    {t.kind === "EXAM" && <Badge>Examen</Badge>}
+                    <Badge>Priorité {t.priority ?? 2}</Badge>
+                    {t.status === "PLANNED" && +new Date(t.endsAt) < now && (
+                      <Badge>En retard</Badge>
+                    )}
                     <h3>{t.title}</h3>
                     <p>
                       {new Date(t.startsAt).toLocaleString("fr-FR", {
@@ -182,6 +222,13 @@ export function PlanningView() {
                         onClick={() => {
                           setEditing(t);
                           setTitle(t.title);
+                          setCourseId(t.courseId ?? "");
+                          setKind(t.kind ?? "REVISION");
+                          setPriority(t.priority ?? 2);
+                          setReminder(
+                            t.reminderMinutes !== null &&
+                              t.reminderMinutes !== undefined,
+                          );
                           setZone(t.plan.timeZone);
                           setStart(
                             new Date(t.startsAt)
@@ -214,11 +261,63 @@ export function PlanningView() {
                       </Button>
                     </div>
                   )}
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setRenaming(t);
+                      setPlanTitle(t.plan.title ?? "Mon programme");
+                    }}
+                  >
+                    Renommer le programme
+                  </Button>
                   <TaskHistory itemId={t.id} timeZone={t.plan.timeZone} />
                 </article>
               ))}
             </div>
           </Card>
+          {renaming && (
+            <Card>
+              <h2>Modifier le programme</h2>
+              <form
+                className="saas-form"
+                onSubmit={async (e) => {
+                  e.preventDefault();
+                  setBusy(true);
+                  setError("");
+                  try {
+                    await api("/study-plans/" + renaming.planId, {
+                      method: "PATCH",
+                      body: JSON.stringify({ title: planTitle }),
+                    });
+                    setRenaming(null);
+                    tasks.reload();
+                  } catch (err) {
+                    setError(message(err));
+                  } finally {
+                    setBusy(false);
+                  }
+                }}
+              >
+                <FormField id="plan-title" label="Titre du programme">
+                  <Input
+                    id="plan-title"
+                    required
+                    maxLength={160}
+                    value={planTitle}
+                    onChange={(e) => setPlanTitle(e.target.value)}
+                  />
+                </FormField>
+                <Button disabled={busy}>Enregistrer le programme</Button>
+                <Button
+                  variant="outline"
+                  type="button"
+                  onClick={() => setRenaming(null)}
+                >
+                  Fermer
+                </Button>
+              </form>
+            </Card>
+          )}
           <Card>
             <h2>{editing ? "Modifier une séance" : "Planifier une séance"}</h2>
             <form
@@ -238,6 +337,9 @@ export function PlanningView() {
                         editing
                           ? {
                               version: editing.version,
+                              courseId: courseId || null,
+                              kind,
+                              priority,
                               title,
                               localStart: start,
                               durationMinutes: minutes,
@@ -251,6 +353,9 @@ export function PlanningView() {
                               tasks: [
                                 {
                                   title,
+                                  courseId: courseId || null,
+                                  kind,
+                                  priority,
                                   localStart: start,
                                   durationMinutes: minutes,
                                   reminderMinutes: reminder ? 15 : null,
@@ -281,6 +386,41 @@ export function PlanningView() {
                   required
                   maxLength={160}
                 />
+              </FormField>
+              <FormField id="task-course" label="Cours associé">
+                <Select
+                  id="task-course"
+                  value={courseId}
+                  onChange={(e) => setCourseId(e.target.value)}
+                >
+                  <option value="">Sans cours associé</option>
+                  {courses.data?.items.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.title}
+                    </option>
+                  ))}
+                </Select>
+              </FormField>
+              <FormField id="task-kind" label="Type de tâche">
+                <Select
+                  id="task-kind"
+                  value={kind}
+                  onChange={(e) => setKind(e.target.value)}
+                >
+                  <option value="REVISION">Révision</option>
+                  <option value="EXAM">Examen</option>
+                </Select>
+              </FormField>
+              <FormField id="task-priority" label="Priorité">
+                <Select
+                  id="task-priority"
+                  value={priority}
+                  onChange={(e) => setPriority(Number(e.target.value))}
+                >
+                  <option value={1}>Basse</option>
+                  <option value={2}>Normale</option>
+                  <option value={3}>Haute</option>
+                </Select>
               </FormField>
               <FormField id="task-start" label="Date et heure locale">
                 <Input
@@ -346,6 +486,10 @@ export function PlanningView() {
               </div>
             </form>
           </Card>
+          <PlanningAssistant
+            timeZone={zoneValid ? zone : "Europe/Paris"}
+            onApplied={tasks.reload}
+          />
         </>
       )}
     </>

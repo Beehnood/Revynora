@@ -42,8 +42,18 @@ export class PrismaPlanRepository implements PlanRepository {
     return { items, total, limit: 500 };
   }
   private async snapshot(tx: Prisma.TransactionClient, item: StudyPlanItem) {
-    const { id, version, title, startsAt, endsAt, status, reminderMinutes } =
-      item;
+    const {
+      id,
+      version,
+      title,
+      startsAt,
+      endsAt,
+      status,
+      reminderMinutes,
+      courseId,
+      kind,
+      priority,
+    } = item;
     await tx.studyPlanItemVersion.create({
       data: {
         itemId: id,
@@ -53,6 +63,9 @@ export class PrismaPlanRepository implements PlanRepository {
         endsAt,
         status,
         reminderMinutes,
+        courseId,
+        kind,
+        priority,
       },
     });
   }
@@ -99,9 +112,48 @@ export class PrismaPlanRepository implements PlanRepository {
         },
       });
   }
-  generate(userId: string, input: GenerateInput) {
+  private async validateCourse(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    courseId?: string | null,
+  ) {
+    if (!courseId) return;
+    const course = await tx.course.findFirst({
+      where: {
+        id: courseId,
+        OR: [{ ownerId: userId }, { ownerId: null, source: "ADMIN" }],
+      },
+    });
+    if (!course) throw missing();
+  }
+  generate(
+    userId: string,
+    input: GenerateInput,
+    options?: { requestId: string; hash: string },
+  ) {
     return this.db.$transaction(async (tx) => {
       await this.lock(tx, userId);
+      if (options) {
+        const existing = await tx.studyPlan.findUnique({
+          where: { generationKey: options.requestId },
+          include: { items: true },
+        });
+        if (existing) {
+          if (
+            existing.userId !== userId ||
+            existing.generationHash !== options.hash
+          )
+            throw new DomainError(
+              409,
+              "REQUEST_CONFLICT",
+              "Identifiant de proposition déjà utilisé.",
+            );
+          return existing;
+        }
+      }
+      const availability = options
+        ? await tx.studyAvailability.findMany({ where: { userId } })
+        : [];
       const busy = await tx.studyPlanItem.findMany({
         where: {
           plan: { userId },
@@ -111,9 +163,16 @@ export class PrismaPlanRepository implements PlanRepository {
         select: { startsAt: true, endsAt: true },
       });
       const plan = await tx.studyPlan.create({
-        data: { userId, title: input.title, timeZone: input.timeZone },
+        data: {
+          userId,
+          title: input.title,
+          timeZone: input.timeZone,
+          generationKey: options?.requestId,
+          generationHash: options?.hash,
+        },
       });
       for (const task of input.tasks) {
+        await this.validateCourse(tx, userId, task.courseId);
         const start = localInstant(task.localStart, input.timeZone);
         if (start < new Date())
           throw new DomainError(
@@ -127,12 +186,45 @@ export class PrismaPlanRepository implements PlanRepository {
           busy,
           input.resolveConflicts,
         );
+        if (options) {
+          if (
+            !availability.some(
+              (a) => slot.startsAt >= a.startsAt && slot.endsAt <= a.endsAt,
+            )
+          )
+            throw new DomainError(
+              409,
+              "OUTSIDE_AVAILABILITY",
+              "Le créneau n’est plus disponible. Regénérez la proposition.",
+            );
+          const exam = task.courseId
+            ? await tx.studyPlanItem.findFirst({
+                where: {
+                  plan: { userId },
+                  courseId: task.courseId,
+                  kind: "EXAM",
+                  status: "PLANNED",
+                  endsAt: { gt: new Date() },
+                },
+                orderBy: { startsAt: "asc" },
+              })
+            : null;
+          if (exam && slot.endsAt > exam.startsAt)
+            throw new DomainError(
+              409,
+              "AFTER_EXAM",
+              "Une révision doit précéder l’examen.",
+            );
+        }
         busy.push(slot);
         const item = await tx.studyPlanItem.create({
           data: {
             planId: plan.id,
             title: task.title,
             reminderMinutes: task.reminderMinutes,
+            courseId: task.courseId,
+            kind: task.kind,
+            priority: task.priority,
             ...slot,
           },
         });
@@ -159,6 +251,7 @@ export class PrismaPlanRepository implements PlanRepository {
           "STALE_TASK",
           "Cette séance a changé. Rechargez le planning.",
         );
+      await this.validateCourse(tx, userId, input.courseId);
       const start = input.localStart
         ? localInstant(input.localStart, item.plan.timeZone)
         : item.startsAt;
@@ -181,6 +274,9 @@ export class PrismaPlanRepository implements PlanRepository {
           ...slot,
           status,
           title: input.title,
+          courseId: input.courseId,
+          kind: input.kind,
+          priority: input.priority,
           reminderMinutes: input.reminderMinutes,
           version: { increment: 1 },
         },
@@ -188,6 +284,46 @@ export class PrismaPlanRepository implements PlanRepository {
       await this.snapshot(tx, changed);
       await this.delivery(tx, changed);
       return changed;
+    });
+  }
+  async rename(userId: string, id: string, title: string) {
+    const result = await this.db.studyPlan.updateMany({
+      where: { id, userId },
+      data: { title },
+    });
+    if (!result.count) throw missing();
+    return { ok: true };
+  }
+  availability(userId: string) {
+    return this.db.studyAvailability.findMany({
+      where: { userId, endsAt: { gt: new Date() } },
+      orderBy: { startsAt: "asc" },
+    });
+  }
+  saveAvailability(userId: string, slots: { startsAt: Date; endsAt: Date }[]) {
+    return this.db.$transaction(async (tx) => {
+      await this.lock(tx, userId);
+      const sorted = [...slots].sort((a, b) => +a.startsAt - +b.startsAt);
+      for (let i = 0; i < sorted.length; i++) {
+        if (
+          sorted[i]!.startsAt < new Date() ||
+          (i && sorted[i]!.startsAt < sorted[i - 1]!.endsAt)
+        )
+          throw new DomainError(
+            400,
+            "INVALID_AVAILABILITY",
+            "Créneaux futurs sans chevauchement requis.",
+          );
+      }
+      await tx.studyAvailability.deleteMany({ where: { userId } });
+      if (slots.length)
+        await tx.studyAvailability.createMany({
+          data: slots.map((s) => ({ userId, ...s })),
+        });
+      return tx.studyAvailability.findMany({
+        where: { userId },
+        orderBy: { startsAt: "asc" },
+      });
     });
   }
 }
