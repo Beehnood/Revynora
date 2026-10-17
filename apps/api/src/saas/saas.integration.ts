@@ -111,6 +111,21 @@ afterAll(async () => {
   await app?.close();
 });
 describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () => {
+  it("inscription atomique avec historique FREE sans paiement", async () => {
+    const history = (
+      await req("/subscriptions/history", "GET", undefined, a.cookie)
+    ).data;
+    expect(history.total).toBe(1);
+    expect(history.items[0]).toMatchObject({
+      provider: "internal",
+      priceCents: 0,
+      subscription: { code: "FREE" },
+    });
+    expect(await db.payment.count({ where: { userId: a.id } })).toBe(0);
+    expect(
+      (await req("/subscriptions/me", "GET", undefined, a.cookie)).data.period,
+    ).toBeNull();
+  });
   it("refuse les accès payants Free, les rôles et les payloads forgés", async () => {
     const contract = (await req("/openapi.json")).data;
     const webhookDoc = contract.paths["/api/v1/webhooks/stripe"].post;
@@ -244,7 +259,7 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
     expect(
       (await req("/subscriptions/history", "GET", undefined, b.cookie)).data
         .total,
-    ).toBe(2);
+    ).toBe(3);
     expect(
       (await req("/billing/portal-session", "POST", {}, b.cookie)).data.url,
     ).toContain("/app/abonnement");
@@ -436,6 +451,87 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
       ).status,
     ).toBe(400);
   });
+  it("conserve les versions d’une tâche, refuse le passé et protège leur propriété", async () => {
+    const item = await db.studyPlanItem.findFirstOrThrow({
+      where: { plan: { userId: a.id }, status: "PLANNED" },
+    });
+    const oldDue = await db.reminderDelivery.findFirstOrThrow({
+      where: { itemId: item.id, status: "PENDING" },
+    });
+    const nextDay = new Date(Date.now() + 10 * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const changed = await req(
+      "/study-plan-items/" + item.id,
+      "PATCH",
+      {
+        version: item.version,
+        title: "Séance reportée",
+        localStart: nextDay + "T12:00",
+      },
+      a.cookie,
+    );
+    expect(changed.status).toBe(200);
+    const history = await req(
+      "/study-plan-items/" + item.id + "/history",
+      "GET",
+      undefined,
+      a.cookie,
+    );
+    expect(history.status).toBe(200);
+    expect(history.data.items.map((v: any) => v.version)).toEqual([1, 0]);
+    expect(history.data.items[1].startsAt).toBe(item.startsAt.toISOString());
+    expect(
+      (
+        await db.reminderDelivery.findUniqueOrThrow({
+          where: { id: oldDue.id },
+        })
+      ).status,
+    ).toBe("CANCELLED");
+    expect(
+      await db.reminderDelivery.count({
+        where: { itemId: item.id, status: "PENDING" },
+      }),
+    ).toBe(1);
+    expect(
+      (
+        await req(
+          "/study-plan-items/" + item.id,
+          "PATCH",
+          { version: 1, localStart: "2020-01-01T12:00" },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await req(
+          "/study-plan-items/" + item.id + "/history?page=0",
+          "GET",
+          undefined,
+          a.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const c = await register("Charlie");
+    await paid(c);
+    expect(
+      (
+        await req(
+          "/study-plan-items/" + item.id + "/history",
+          "GET",
+          undefined,
+          c.cookie,
+        )
+      ).status,
+    ).toBe(404);
+    await expect(
+      db.studyPlanItemVersion.update({
+        where: { itemId_version: { itemId: item.id, version: 0 } },
+        data: { title: "Modification interdite" },
+      }),
+    ).rejects.toThrow();
+  });
   it("rappels : opt-in Pro, retrait possible et vérification à la livraison", async () => {
     expect(
       (await req("/notifications/preferences", "GET", undefined, a.cookie)).data
@@ -583,7 +679,7 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
     const webhook = app.get(ProcessBillingWebhook);
     const old = await provider.cancel(b.id);
     const prior = await db.userSubscriptionHistory.findFirstOrThrow({
-      where: { userId: b.id, status: "ACTIVE" },
+      where: { userId: b.id, status: "ACTIVE", provider: "mock" },
     });
     const source = await db.mockBillingRecord.findUniqueOrThrow({
       where: { id: prior.providerSubscriptionId },

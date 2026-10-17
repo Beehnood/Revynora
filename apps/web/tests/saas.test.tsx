@@ -1,3 +1,4 @@
+import { TaskHistory } from "../components/saas/task-history";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import {
   render,
@@ -56,6 +57,48 @@ const card = {
   dueAt: new Date().toISOString(),
 };
 describe("Écrans SaaS", () => {
+  it("charge l’historique à la demande, pagine et permet de réessayer une panne", async () => {
+    vi.mocked(api).mockResolvedValueOnce({
+      items: [
+        {
+          id: "v",
+          version: 1,
+          title: "Séance déplacée",
+          startsAt: "2026-10-20T10:00Z",
+          status: "PLANNED",
+        },
+      ],
+      total: 21,
+      page: 1,
+      pageSize: 20,
+    });
+    render(<TaskHistory itemId="task" timeZone="Europe/Paris" />);
+    expect(api).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Historique de la séance" }),
+    );
+    await screen.findByText("Version 1 · Séance déplacée");
+    vi.mocked(api).mockRejectedValueOnce(new Error("Hors ligne"));
+    fireEvent.click(screen.getByRole("button", { name: "Version suivante" }));
+    await screen.findByRole("alert");
+    vi.mocked(api).mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Historique de la séance" }),
+    );
+    expect(
+      screen.queryByLabelText("Versions de la séance"),
+    ).not.toBeInTheDocument();
+  });
+
   it("affiche les offres, reprend un paiement et valide une simulation", async () => {
     m.data.set("/subscriptions/me", {
       plan: "FREE",

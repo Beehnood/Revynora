@@ -47,6 +47,7 @@ export type PatchInput = {
   resolveConflicts: boolean;
 };
 export interface PlanRepository {
+  history(user: string, id: string, page: number): Promise<unknown>;
   list(user: string, from: Date, to: Date): Promise<unknown>;
   generate(user: string, input: GenerateInput): Promise<unknown>;
   edit(user: string, id: string, input: PatchInput): Promise<unknown>;

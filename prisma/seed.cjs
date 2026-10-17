@@ -15,8 +15,17 @@ const db = new PrismaClient();
   ])
     await db.subscription.upsert({
       where: { code },
-      create: { code, name: code, priceCents },
-      update: { name: code, priceCents },
+      create: {
+        code,
+        name: code,
+        priceCents,
+        interval: code === "FREE" ? "none" : "month",
+      },
+      update: {
+        name: code,
+        priceCents,
+        interval: code === "FREE" ? "none" : "month",
+      },
     });
   await db.course.upsert({
     where: { id: "00000000-0000-4000-8000-000000000001" },

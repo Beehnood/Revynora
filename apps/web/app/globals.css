@@ -2441,3 +2441,15 @@ summary {
     padding: 20px;
   }
 }
+.calendar-list .saas-row {
+  flex-wrap: wrap;
+}
+.task-history {
+  width: 100%;
+  border-top: 1px solid var(--border);
+  padding-top: 12px;
+}
+.task-history p {
+  margin: 12px 0;
+  font-size: 14px;
+}

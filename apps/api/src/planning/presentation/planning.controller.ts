@@ -65,6 +65,17 @@ export class PlanningController {
       ),
     );
   }
+  @Get("study-plan-items/:id/history") history(
+    @Req() r: AuthRequest,
+    @Param("id") id: string,
+    @Query() q: unknown,
+  ) {
+    const p = parse(
+      z.object({ page: z.coerce.number().int().min(1).max(10000).default(1) }),
+      q,
+    );
+    return this.use.history(r.student.id, parse(z.string().uuid(), id), p.page);
+  }
   @Patch("study-plan-items/:id") edit(
     @Req() r: AuthRequest,
     @Param("id") id: string,

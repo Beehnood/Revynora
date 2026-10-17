@@ -1,6 +1,6 @@
 import { GetEntitlements } from "../billing/application/billing.use-cases";
 import { Inject, Injectable } from "@nestjs/common";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
 import { DatabaseService } from "../database/database.service";
 import { ApiError } from "../shared/http/errors";
@@ -95,6 +95,28 @@ export class AuthService {
           create: {
             tokenHash: digest(token),
             expiresAt: new Date(Date.now() + maxAge),
+          },
+        },
+        subscriptionPeriods: {
+          create: {
+            subscription: {
+              connectOrCreate: {
+                where: { code: "FREE" },
+                create: {
+                  code: "FREE",
+                  name: "FREE",
+                  priceCents: 0,
+                  interval: "none",
+                },
+              },
+            },
+            provider: "internal",
+            providerSubscriptionId: "free_" + randomUUID(),
+            priceCents: 0,
+            currency: "eur",
+            status: "ACTIVE",
+            startsAt: new Date(),
+            endsAt: new Date("9999-12-31T00:00:00Z"),
           },
         },
         termsAcceptedAt: new Date(),

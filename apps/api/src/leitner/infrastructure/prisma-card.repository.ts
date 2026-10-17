@@ -1,12 +1,16 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { DomainError, missing } from "../../shared/domain/errors";
 import {
+  DEFAULT_LEITNER_INTERVALS,
   scheduleReview,
   type CardRepository,
   type CardInput,
 } from "../domain/leitner";
 export class PrismaCardRepository implements CardRepository {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: PrismaClient,
+    private readonly intervals: readonly number[] = DEFAULT_LEITNER_INTERVALS,
+  ) {}
   async list(userId: string, due: boolean, page: number, pageSize: number) {
     const where = {
       userId,
@@ -111,7 +115,12 @@ export class PrismaCardRepository implements CardRepository {
           "NOT_DUE",
           "Cette carte n’est pas encore à revoir.",
         );
-      const next = scheduleReview(card.box, input.remembered, new Date());
+      const next = scheduleReview(
+        card.box,
+        input.remembered,
+        new Date(),
+        this.intervals,
+      );
       await tx.leitnerCard.update({
         where: { id },
         data: {

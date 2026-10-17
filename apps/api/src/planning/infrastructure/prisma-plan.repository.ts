@@ -1,4 +1,4 @@
-import type { PrismaClient, Prisma } from "@prisma/client";
+import type { PrismaClient, Prisma, StudyPlanItem } from "@prisma/client";
 import { Temporal } from "@js-temporal/polyfill";
 import { DomainError, missing } from "../../shared/domain/errors";
 import {
@@ -40,6 +40,38 @@ export class PrismaPlanRepository implements PlanRepository {
       this.db.studyPlanItem.count({ where }),
     ]);
     return { items, total, limit: 500 };
+  }
+  private async snapshot(tx: Prisma.TransactionClient, item: StudyPlanItem) {
+    const { id, version, title, startsAt, endsAt, status, reminderMinutes } =
+      item;
+    await tx.studyPlanItemVersion.create({
+      data: {
+        itemId: id,
+        version,
+        title,
+        startsAt,
+        endsAt,
+        status,
+        reminderMinutes,
+      },
+    });
+  }
+  async history(userId: string, id: string, page: number) {
+    const item = await this.db.studyPlanItem.findFirst({
+      where: { id, plan: { userId } },
+    });
+    if (!item) throw missing();
+    const where = { itemId: id };
+    const [items, total] = await this.db.$transaction([
+      this.db.studyPlanItemVersion.findMany({
+        where,
+        orderBy: { version: "desc" },
+        skip: (page - 1) * 20,
+        take: 20,
+      }),
+      this.db.studyPlanItemVersion.count({ where }),
+    ]);
+    return { items, total, page, pageSize: 20 };
   }
   private async lock(tx: Prisma.TransactionClient, user: string) {
     await tx.$queryRaw`SELECT id FROM "User" WHERE id=${user} FOR UPDATE`;
@@ -104,6 +136,7 @@ export class PrismaPlanRepository implements PlanRepository {
             ...slot,
           },
         });
+        await this.snapshot(tx, item);
         await this.delivery(tx, item);
       }
       return tx.studyPlan.findUniqueOrThrow({
@@ -132,6 +165,8 @@ export class PrismaPlanRepository implements PlanRepository {
       const minutes =
         input.durationMinutes ?? (+item.endsAt - +item.startsAt) / 60000;
       const status = input.status ?? item.status;
+      if (status === "PLANNED" && start < new Date())
+        throw new DomainError(400, "PAST_TASK", "Choisissez une date future.");
       const busy = await tx.studyPlanItem.findMany({
         where: { id: { not: id }, plan: { userId }, status: "PLANNED" },
         select: { startsAt: true, endsAt: true },
@@ -150,6 +185,7 @@ export class PrismaPlanRepository implements PlanRepository {
           version: { increment: 1 },
         },
       });
+      await this.snapshot(tx, changed);
       await this.delivery(tx, changed);
       return changed;
     });

@@ -36,7 +36,11 @@ export function resolveEntitlement(periods: Period[], now: Date): Entitlement {
   const period =
     periods
       .filter(
-        (p) => p.status === "ACTIVE" && p.startsAt <= now && p.endsAt > now,
+        (p) =>
+          p.plan !== "FREE" &&
+          p.status === "ACTIVE" &&
+          p.startsAt <= now &&
+          p.endsAt > now,
       )
       .sort(
         (a, b) =>

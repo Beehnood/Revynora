@@ -313,6 +313,7 @@ model StudyPlanItem {
   reminderMinutes Int?
   version Int @default(0)
   createdAt DateTime @default(now())
+  versions StudyPlanItemVersion[]
   @@index([startsAt])
 }
 model EmailMessage {
@@ -354,4 +355,18 @@ model ReminderDelivery {
  dueAt DateTime
  status String @default("PENDING")
  @@unique([itemId, version])
+}
+
+model StudyPlanItemVersion {
+ id String @id @default(uuid())
+ itemId String
+ item StudyPlanItem @relation(fields:[itemId],references:[id],onDelete:Cascade)
+ version Int
+ title String
+ startsAt DateTime
+ endsAt DateTime
+ status TaskStatus
+ reminderMinutes Int?
+ recordedAt DateTime @default(now())
+ @@unique([itemId,version])
 }

@@ -1,3 +1,4 @@
+import { loadEnvironment } from "../shared/config/environment";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseService } from "../database/database.service";
@@ -13,7 +14,13 @@ import { LeitnerController } from "./presentation/leitner.controller";
       provide: LeitnerUseCases,
       inject: [DatabaseService, GetEntitlements],
       useFactory: (db: DatabaseService, access: GetEntitlements) =>
-        new LeitnerUseCases(new PrismaCardRepository(db.client), access),
+        new LeitnerUseCases(
+          new PrismaCardRepository(
+            db.client,
+            loadEnvironment().LEITNER_INTERVAL_DAYS,
+          ),
+          access,
+        ),
     },
   ],
 })

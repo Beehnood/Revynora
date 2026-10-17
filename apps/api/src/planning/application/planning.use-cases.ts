@@ -9,6 +9,10 @@ export class PlanningUseCases {
     private readonly repo: PlanRepository,
     private readonly access: GetEntitlements,
   ) {}
+  async history(user: string, id: string, page: number) {
+    await this.access.require(user, "PRO");
+    return this.repo.history(user, id, page);
+  }
   async list(user: string, from: Date, to: Date) {
     await this.access.require(user, "PRO");
     return this.repo.list(user, from, to);

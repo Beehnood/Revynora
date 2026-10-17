@@ -10,6 +10,19 @@ export const demoFormSchema = z.object({
 });
 export const environmentSchema = z
   .object({
+    LEITNER_INTERVAL_DAYS: z
+      .string()
+      .default("1,2,4,8,16")
+      .transform((v) => v.split(",").map((x) => Number(x.trim())))
+      .pipe(
+        z
+          .array(z.number().int().min(1).max(365))
+          .length(5)
+          .refine(
+            (v) => v.every((n, i) => i === 0 || n > v[i - 1]!),
+            "Les cinq intervalles doivent être strictement croissants.",
+          ),
+      ),
     BILLING_PROVIDER: z.enum(["mock", "stripe"]).default("mock"),
     WORKER_ENABLED: z.enum(["true", "false"]).default("true"),
     MAIL_PROVIDER: z.enum(["local", "smtp"]).default("local"),

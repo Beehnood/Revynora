@@ -1,4 +1,5 @@
 "use client";
+import { TaskHistory } from "./task-history";
 import { useState } from "react";
 import Link from "next/link";
 import { api, message } from "@/lib/api";
@@ -213,6 +214,7 @@ export function PlanningView() {
                       </Button>
                     </div>
                   )}
+                  <TaskHistory itemId={t.id} timeZone={t.plan.timeZone} />
                 </article>
               ))}
             </div>

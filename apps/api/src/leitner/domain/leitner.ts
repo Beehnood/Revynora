@@ -1,11 +1,32 @@
 import { DomainError } from "../../shared/domain/errors";
-export function scheduleReview(box: number, remembered: boolean, now: Date) {
+export const DEFAULT_LEITNER_INTERVALS: readonly number[] = [1, 2, 4, 8, 16];
+export function scheduleReview(
+  box: number,
+  remembered: boolean,
+  now: Date,
+  intervals: readonly number[] = DEFAULT_LEITNER_INTERVALS,
+) {
+  if (
+    intervals.length !== 5 ||
+    intervals.some(
+      (days, i) =>
+        !Number.isInteger(days) ||
+        days < 1 ||
+        days > 365 ||
+        (i > 0 && days <= intervals[i - 1]!),
+    )
+  )
+    throw new DomainError(
+      500,
+      "INVALID_LEITNER_CONFIG",
+      "Configuration des intervalles Leitner invalide.",
+    );
   if (!Number.isInteger(box) || box < 1 || box > 5)
     throw new DomainError(400, "INVALID_BOX", "Boîte invalide.");
   const next = remembered ? Math.min(5, box + 1) : 1;
   return {
     toBox: next,
-    nextDueAt: new Date(now.getTime() + [1, 2, 4, 7, 14][next - 1]! * 86400000),
+    nextDueAt: new Date(now.getTime() + intervals[next - 1]! * 86400000),
   };
 }
 export type CardInput = { front: string; back: string; courseId?: string };
