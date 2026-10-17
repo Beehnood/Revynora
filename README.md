@@ -143,3 +143,21 @@ Pro : calendrier semaine/mois/liste, cours, examens, priorités, statuts, dépla
 Tous les étudiants : dashboard /app/progression avec scores, révisions, boîtes, matières et activité réelle. Les jours statistiques sont UTC ; les anciennes durées inconnues sont exclues du temps chronométré.
 
 Pour une installation déjà configurée : `pnpm install --frozen-lockfile`, `pnpm db:generate`, `pnpm db:migrate`, puis `pnpm dev`. Le seed du guide initial n’est nécessaire que pour initialiser le catalogue sur une base neuve. L’application reste locale.
+
+## Phase 4 — Mobile et préparation du déploiement
+
+Les parcours Expo natifs et les sessions sécurisées sont ajoutés ; l’infrastructure Oracle, les deux projets Vercel et les profils EAS sont **préparés, pas déployés**. [Audit et blocages](docs/phase4/AUDIT.md) · [Plan de déploiement](docs/phase4/DEPLOIEMENT.md) · [Builds et recette Mobile](docs/phase4/MOBILE.md) · [Bilan](docs/phase4/RECETTE.md).
+
+Cibles demandées : `revynora.watercode.dev`, `admin.revynora.watercode.dev`, `api.revynora.watercode.dev`. Elles ne sont pas encore validées en production. Les configurations Vercel désactivent les déploiements Git automatiques en attendant l’accord utilisateur. Aucun fichier, service, DNS ou base d’un autre projet Oracle n’a été modifié.
+
+```sh
+pnpm dev                 # Web + API + Admin locaux
+pnpm dev:mobile          # Metro, développement natif uniquement
+pnpm --filter @revynora/mobile test
+pnpm --filter @revynora/mobile test:coverage
+pnpm build:mobile        # export Metro iOS/Android ; pas un APK/IPA signé
+```
+
+Le Mobile utilise par défaut l’API publique HTTPS cible. Pour tester en LAN avant déploiement, définir une URL explicite dans `apps/mobile/.env.local` et lancer l’API de développement avec `HOST=0.0.0.0 pnpm dev:api`, sur un réseau de test et avec des comptes de test. Aucun fallback localhost dans un binaire distribué. Les builds preview EAS restent à effectuer après connexion locale au compte Expo, liaison du vrai projet et API accessible. Le compte Apple Developer et Xcode complet sont encore absents.
+
+Les phases récentes sont sur des branches dédiées ; `main` n’est pas fusionnée automatiquement. L’audit SSH de la VM Oracle est actuellement bloqué par une authentification publickey refusée. Ne pas exécuter les commandes de déploiement avant cet audit et la validation explicite du plan.

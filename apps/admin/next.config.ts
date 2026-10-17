@@ -2,6 +2,16 @@ import { config as loadEnv } from "dotenv";
 import { resolve } from "node:path";
 loadEnv({ path: resolve(process.cwd(), "../../.env"), quiet: true });
 import type { NextConfig } from "next";
+const upstream = process.env.API_URL;
+if (
+  process.env.VERCEL &&
+  (!upstream ||
+    !upstream.startsWith("https://") ||
+    new URL(upstream).origin !== upstream)
+)
+  throw new Error(
+    "Set API_URL to the reviewed HTTPS API origin before a Vercel build.",
+  );
 const config: NextConfig = {
   transpilePackages: ["@revynora/validation", "@revynora/ui"],
   devIndicators: false,

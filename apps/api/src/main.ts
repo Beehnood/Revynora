@@ -8,7 +8,7 @@ async function bootstrap() {
   const app = configureApp(
     await NestFactory.create(AppModule, { rawBody: true }),
   );
-  await app.listen(env.PORT, "127.0.0.1");
+  await app.listen(env.PORT, env.HOST);
 }
 bootstrap().catch(() => {
   console.error("Démarrage API impossible : vérifiez la configuration.");

@@ -1,5 +1,7 @@
 import { z } from "zod";
 import {
+  registerSchema,
+  loginSchema,
   planSchema,
   patchTaskSchema,
   availabilitySchema,
@@ -36,6 +38,8 @@ export function completePhase3OpenApi(doc: OpenAPIObject) {
     return value;
   };
   const requests: Record<string, z.ZodType> = {
+    "POST /api/v1/auth/mobile/register": registerSchema,
+    "POST /api/v1/auth/mobile/login": loginSchema,
     "POST /api/v1/study-plans/generate": planSchema,
     "PATCH /api/v1/study-plan-items/{id}": patchTaskSchema,
     "PATCH /api/v1/study-plans/{id}": z
@@ -45,10 +49,45 @@ export function completePhase3OpenApi(doc: OpenAPIObject) {
     "POST /api/v1/study-plans/ai/propose": aiPlanningRequestSchema,
     "POST /api/v1/study-plans/ai/confirm": aiPlanningConfirmSchema,
   };
+  doc.components ??= {};
+  doc.components.schemas ??= {};
+  doc.components.schemas.MobileSession = {
+    type: "object",
+    required: ["user", "token", "expiresAt"],
+    additionalProperties: false,
+    properties: {
+      user: { $ref: "#/components/schemas/User" },
+      token: {
+        type: "string",
+        pattern: "^[a-zA-Z0-9_-]{43}$",
+        description:
+          "Session opaque native, à conserver uniquement dans le stockage sécurisé.",
+      },
+      expiresAt: { type: "string", format: "date-time" },
+    },
+  };
   for (const [path, item] of Object.entries(doc.paths))
     for (const method of ["get", "post", "put", "patch"] as const) {
       const op = item[method];
       if (!op) continue;
+      if (path.includes("/auth/mobile/")) {
+        op.security = [];
+        op.responses["201"] = {
+          description:
+            "Session native, sans cookie. Appel natif/CLI sans Origin requis.",
+          content: {
+            "application/json": {
+              schema: { $ref: "#/components/schemas/MobileSession" },
+            },
+          },
+        };
+      } else if (
+        /^\/api\/v1\/(users|courses|quizzes|attempts|leitner|study-|progress|notifications|learning|privacy|admin)/.test(
+          path,
+        ) ||
+        path === "/api/v1/subscriptions/me"
+      )
+        op.security = [{ cookie: [] }, { bearer: [] }];
       const schema = requests[method.toUpperCase() + " " + path];
       if (schema)
         op.requestBody = {

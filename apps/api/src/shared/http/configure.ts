@@ -13,19 +13,27 @@ export function configureApp(app: INestApplication) {
     if (new URL(origin).hostname === "127.0.0.1")
       origins.add(origin.replace("127.0.0.1", "localhost"));
   }
+  app.getHttpAdapter().getInstance().set("trust proxy", env.TRUST_PROXY_HOPS);
   app.setGlobalPrefix("api/v1");
   app.enableCors({
     origin: [...origins],
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    allowedHeaders: ["Content-Type", "X-Revynora-Client"],
+    allowedHeaders: ["Content-Type", "X-Revynora-Client", "Authorization"],
   });
   app.use((req: Request, res: Response, next: NextFunction) => {
     res.setHeader("Cache-Control", "no-store");
     res.setHeader("X-Content-Type-Options", "nosniff");
+    const native =
+      req.headers["x-revynora-client"] === "mobile" &&
+      !req.headers.origin &&
+      (req.path === "/api/v1/auth/mobile/login" ||
+        req.path === "/api/v1/auth/mobile/register" ||
+        /^Bearer [a-zA-Z0-9_-]{43}$/.test(req.headers.authorization ?? ""));
     if (
       !["GET", "HEAD", "OPTIONS"].includes(req.method) &&
       !(req.method === "POST" && req.path === "/api/v1/webhooks/stripe") &&
+      !native &&
       (req.headers["x-revynora-client"] !== "web" ||
         (req.headers.origin && !origins.has(req.headers.origin)))
     ) {
@@ -41,12 +49,13 @@ export function configureApp(app: INestApplication) {
   app.useGlobalFilters(new ApiExceptionFilter());
   app.enableShutdownHooks();
   const config = new DocumentBuilder()
-    .setTitle("Revynora · Produit SaaS Web")
+    .setTitle("Revynora · API Web et Mobile")
     .setDescription(
-      "API Phase 2. Sessions HttpOnly ; mutations requièrent X-Revynora-Client: web, sauf webhook Stripe signé sur corps brut. Aucune solution avant soumission. Les erreurs ont la forme {code,message,details?,requestId}.",
+      "API Web/Mobile. Web : sessions HttpOnly et X-Revynora-Client: web. Mobile : bearer opaque et X-Revynora-Client: mobile, sans Origin ni cookie. Les endpoints /auth/mobile/login et register renvoient une session native. Aucun corrigé avant soumission. Erreurs {code,message,details?,requestId}.",
     )
-    .setVersion("2.0.0")
+    .setVersion("4.0.0")
     .addCookieAuth("revynora_session")
+    .addBearerAuth({ type: "http", scheme: "bearer", bearerFormat: "opaque" })
     .build();
   const document = completeOpenApi(SwaggerModule.createDocument(app, config));
   SwaggerModule.setup("api/v1/docs", app, document, {

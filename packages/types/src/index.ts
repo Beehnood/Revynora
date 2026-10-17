@@ -146,3 +146,9 @@ export type LeitnerCardView = {
   dueAt: string;
   courseId: string | null;
 };
+
+export type MobileSession = {
+  user: UserProfile;
+  token: string;
+  expiresAt: string;
+};

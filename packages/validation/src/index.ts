@@ -10,6 +10,8 @@ export const demoFormSchema = z.object({
 });
 export const environmentSchema = z
   .object({
+    HOST: z.enum(["127.0.0.1", "0.0.0.0"]).default("127.0.0.1"),
+    TRUST_PROXY_HOPS: z.coerce.number().int().min(0).max(1).default(0),
     LEITNER_INTERVAL_DAYS: z
       .string()
       .default("1,3,7,14,30")

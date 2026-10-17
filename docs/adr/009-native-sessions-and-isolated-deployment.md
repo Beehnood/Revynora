@@ -1,0 +1,15 @@
+# ADR 009 — Sessions natives et déploiement isolé
+
+Statut : préparation Phase 4 ; déploiement distant en attente de validation et d’accès.
+
+Les quatre applications et le monolithe Nest sont conservés. Aucun schéma Prisma ni migration modifié. Le client natif utilise les mêmes sessions opaques hachées, expiration, révocation, propriété et entitlements que les clients Next ; aucun nouveau JWT ni seconde base. Deux endpoints natifs réutilisent l’inscription/connexion existantes, avec token dans une réponse no-store et sans cookie. Ils refusent les origines de navigateur et les comptes Admin. Les clients natifs suivants fournissent bearer + marqueur mobile sans Origin ; un bearer invalide ne retombe jamais sur un cookie. Les appels Web gardent leur marqueur/origine et les cookies HttpOnly. La sécurité ne dépend pas du fait qu’un en-tête mobile soit secret : l’authentification exige toujours identifiants ou session valide.
+
+SecureStore ne persiste que le token et un indicateur d’onboarding, aucun mot de passe/cache pédagogique. WHEN_UNLOCKED_THIS_DEVICE_ONLY sur iOS ; restauration du profil via API avant ouverture, effacement sur 401, refus de réouvrir une session après une réponse tardive. Les écritures hors réseau ne sont pas mises en queue ; les idempotences de tentative/carte/planning sont celles du Backend. Réplication Web/Mobile signifie relecture du même PostgreSQL, pas une synchronisation de deux sources de vérité.
+
+React Navigation Native Stack et des primitives React Native reprennent la marque existante. Les composants DOM/shadcn ne sont pas importés en natif. L’application affiche les abonnements, sans Checkout natif, achat intégré ou store submit. Les profils EAS distinguent development/preview/production par identifiants ; API publique et vrai projet EAS exigés avant construction distante. Export Metro ≠ APK/IPA.
+
+Sur la VM partagée, utiliser le Nginx existant et des fichiers/ports/volumes exclusivement Revynora ; aucune capture des ports 80/443 par un second proxy. Le Compose conserve PostgreSQL/Redis privés, l’API loopback et des limites de ressources à confirmer après audit de capacité. Les migrations sont une opération manuelle distincte, précédée d’une sauvegarde. La restauration de validation crée une base neuve dédiée. Aucun script ne nettoie les autres projets ou les volumes.
+
+Les clients Vercel utilisent un proxy de même origine pour préserver les sessions cookies et SSR ; les secrets serveur ne sont pas copiés vers les clients. Le mode Node production exige des origines HTTPS et des cookies Secure. Les workflows de qualité sont indépendants par application et n’exécutent aucune publication. Les déploiements Git Vercel sont désactivés pendant cette préparation ; ne pas fusionner ou déployer main sans revue, main étant encore à la Phase 2.
+
+Tests locaux natifs et HTTP/PostgreSQL réels ne remplacent pas l’audit Oracle, les vérifications Vercel/EAS et les tests appareils. Le refus SSH et les CLI non connectées sont des blocages observés, pas des preuves que les comptes ou services distants sont absents.

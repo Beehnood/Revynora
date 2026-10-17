@@ -34,6 +34,8 @@
     "DATABASE_URL",
     "TEST_DATABASE_URL",
     "PORT",
+    "HOST",
+    "TRUST_PROXY_HOPS",
     "AI_*",
     "OPENAI_*",
     "BILLING_PROVIDER",

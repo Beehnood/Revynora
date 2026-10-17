@@ -17,6 +17,7 @@ export default defineConfig({
         "src/admin/**/*.ts",
         "src/privacy/**/*.ts",
         "src/shared/domain/**/*.ts",
+        "src/shared/config/**/*.ts",
         "src/learning/**/*.ts",
         "src/ai/**/*.ts",
         "src/shared/http/**/*.ts",
