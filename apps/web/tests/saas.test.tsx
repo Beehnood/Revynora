@@ -12,7 +12,6 @@ import { LeitnerView } from "../components/saas/leitner-view";
 import { PlanningView } from "../components/saas/planning-view";
 import { NotificationsView } from "../components/saas/notifications-view";
 import { PrivacyControls } from "../components/saas/privacy-controls";
-import { AdminView } from "../components/saas/admin-view";
 import { api } from "../lib/api";
 const m = vi.hoisted(() => ({
   data: new Map<string, unknown>(),
@@ -433,73 +432,5 @@ describe("Écrans SaaS", () => {
       "href",
       "/api/v1/privacy/export",
     );
-  });
-  it("admin : filtres, pagination, suspension et distinction des revenus simulés", async () => {
-    m.data.set("/admin/metrics", {
-      users: 42,
-      newUsers: 3,
-      billingMode: "mock",
-      workerEnabled: false,
-      payments: [
-        {
-          provider: "mock",
-          status: "PAID",
-          _sum: { amountCents: 500 },
-          _count: 1,
-        },
-      ],
-      ai: { _count: 2, _sum: { estimatedCostUsd: null } },
-    });
-    m.data.set("/admin/users", {
-      items: [
-        {
-          id: "u",
-          name: "Alice",
-          email: "a@example.test",
-          role: "STUDENT",
-          disabledAt: null,
-        },
-      ],
-      total: 40,
-    });
-    m.data.set("/admin/events", {
-      items: [
-        {
-          id: "event",
-          eventType: "invoice.paid",
-          status: "ACTIVE",
-          createdAt: "2026-10-16",
-        },
-      ],
-      audit: [{ id: "audit", action: "USER_ENABLED", createdAt: "2026-10-16" }],
-      total: 1,
-    });
-    m.data.set("/admin/offers", [
-      { code: "FREE", priceCents: 0, active: true },
-    ]);
-    render(<AdminView />);
-    expect(screen.getByText(/simulation locale/)).toBeVisible();
-    fireEvent.change(screen.getByLabelText("Du"), {
-      target: { value: "2026-10-01" },
-    });
-    fireEvent.change(screen.getByLabelText("Au (exclu)"), {
-      target: { value: "2026-11-01" },
-    });
-    fireEvent.change(screen.getByLabelText("Rechercher par nom ou e-mail"), {
-      target: { value: "Alice" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Suivant" }));
-    expect(screen.getByText("Page 2")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Précédent" }));
-    fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
-    await waitFor(() =>
-      expect(api).toHaveBeenCalledWith(
-        "/admin/users/u",
-        expect.objectContaining({ body: JSON.stringify({ disabled: true }) }),
-      ),
-    );
-    vi.mocked(api).mockRejectedValueOnce(new Error("Refus"));
-    fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
-    await screen.findByRole("alert");
   });
 });

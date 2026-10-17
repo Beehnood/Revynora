@@ -51,6 +51,10 @@ export const environmentSchema = z
         (v) => v.startsWith("postgresql://") || v.startsWith("postgres://"),
         "URL PostgreSQL requise",
       ),
+    ADMIN_ORIGIN: z
+      .url()
+      .refine((v) => new URL(v).origin === v, "Origine sans chemin requise")
+      .default("http://localhost:3002"),
     WEB_ORIGIN: z
       .url()
       .refine((v) => new URL(v).origin === v, "Origine sans chemin requise")

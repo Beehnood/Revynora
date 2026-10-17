@@ -6,7 +6,7 @@
     "node": ">=22 <25"
   },
   "scripts": {
-    "dev": "turbo dev",
+    "dev": "turbo dev --filter=@revynora/web --filter=@revynora/api --filter=@revynora/admin",
     "build": "turbo build",
     "lint": "turbo lint",
     "typecheck": "turbo typecheck",
@@ -21,7 +21,17 @@
     "db:seed": "node prisma/seed.cjs",
     "test:integration": "pnpm test:prepare && pnpm --filter @revynora/api test:integration",
     "test:prepare": "node scripts/prepare-test-db.cjs",
-    "admin:promote": "node scripts/admin-promote.cjs"
+    "admin:promote": "node scripts/admin-promote.cjs",
+    "dev:web": "turbo dev --filter=@revynora/web",
+    "dev:api": "turbo dev --filter=@revynora/api",
+    "dev:admin": "turbo dev --filter=@revynora/admin",
+    "dev:mobile": "turbo dev --filter=@revynora/mobile",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:prisma-integrity": "node scripts/check-prisma-integrity.mjs",
+    "build:web": "turbo build --filter=@revynora/web",
+    "build:api": "turbo build --filter=@revynora/api",
+    "build:admin": "turbo build --filter=@revynora/admin",
+    "build:mobile": "turbo build --filter=@revynora/mobile"
   },
   "devDependencies": {
     "turbo": "2.5.6",

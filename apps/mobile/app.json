@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "name": "Revynora",
+    "slug": "revynora",
+    "version": "0.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": { "supportsTablet": true },
+    "android": {},
+    "platforms": ["ios", "android"]
+  }
+}

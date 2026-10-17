@@ -1,4 +1,4 @@
-import { AdminView } from "@/components/saas/admin-view";
+// Compatibility route: authorization and redirect live in the layout.
 export default function Page() {
-  return <AdminView />;
+  return null;
 }

@@ -2,16 +2,49 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", ".expo/**"]
     },
-    "dev": { "cache": false, "persistent": true, "dependsOn": ["^build"] },
+    "dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"]
+    },
     "lint": {},
-    "typecheck": { "dependsOn": ["^build"] },
-    "test": { "dependsOn": ["^build"] },
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
+    "test": {
+      "dependsOn": ["^build"]
+    },
     "test:coverage": {
       "outputs": ["coverage/**"],
       "dependsOn": ["^build"],
       "cache": false
     }
-  }
+  },
+  "globalEnv": [
+    "API_URL",
+    "WEB_ORIGIN",
+    "ADMIN_ORIGIN",
+    "NEXT_PUBLIC_WEB_ORIGIN",
+    "EXPO_PUBLIC_API_URL",
+    "NODE_ENV"
+  ],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "PORT",
+    "AI_*",
+    "OPENAI_*",
+    "BILLING_PROVIDER",
+    "STRIPE_*",
+    "COOKIE_SECURE",
+    "SESSION_DAYS",
+    "MAIL_*",
+    "SMTP_*",
+    "WORKER_ENABLED",
+    "QUEUE_NAME",
+    "REDIS_URL",
+    "LEITNER_INTERVAL_DAYS"
+  ]
 }

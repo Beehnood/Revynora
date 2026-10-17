@@ -1,6 +1,6 @@
-# Revynora · Produit SaaS Web
+# Revynora · Monorepo modulaire — Phase 2.5
 
-Phases 0, 1 et 2, d’après les PDF et les références UI/UX fournis. Projet **local uniquement** : aucun hébergement ni déploiement ; paiements simulés ou Stripe test uniquement. L’identité livre ouvert et les tokens violets sont conservés.
+Phases 0, 1 et 2 conservées ; séparation structurelle Phase 2.5, d’après les PDF et les références UI/UX fournis. Projet **local uniquement** : aucun hébergement ni déploiement ; paiements simulés ou Stripe test uniquement. L’identité livre ouvert et les tokens violets sont conservés.
 
 ## Lancer l’application
 
@@ -26,12 +26,29 @@ pnpm dev
 - Révisions Leitner (Plus/Pro) : http://localhost:3000/app/revisions
 - Planning (Pro) : http://localhost:3000/app/planning
 - Notifications et consentement : http://localhost:3000/app/notifications
-- Administration protégée : http://localhost:3000/admin
+- Administration indépendante : http://localhost:3002 (ancienne URL `/admin` conservée comme pont)
 - OpenAPI interactif : http://localhost:3001/api/v1/docs
 - Contrat JSON : http://localhost:3001/api/v1/openapi.json
 - Santé : http://localhost:3001/api/v1/health et `/api/v1/health/ready`
 
 Les serveurs doivent rester lancés pour que ces URL locales répondent. Utiliser le même hôte (localhost ou 127.0.0.1) pendant la connexion : les cookies appartiennent à cet hôte. PostgreSQL utilise le port **5433**, le port 5432 étant déjà occupé sur la machine initiale. Redis utilise 6380. Leurs volumes nommés persistent. `docker compose stop` arrête sans effacer les données.
+
+## Applications indépendantes
+
+`pnpm dev` démarre Web, API et Admin. Le socle Expo est lancé séparément ; aucune fonctionnalité Phase 3 n’est développée.
+
+| Application   | Développement     | Build filtré        | Adresse locale                    |
+| ------------- | ----------------- | ------------------- | --------------------------------- |
+| Étudiant Next | `pnpm dev:web`    | `pnpm build:web`    | http://localhost:3000             |
+| API Nest      | `pnpm dev:api`    | `pnpm build:api`    | http://localhost:3001/api/v1/docs |
+| Admin Next    | `pnpm dev:admin`  | `pnpm build:admin`  | http://localhost:3002             |
+| Socle Expo    | `pnpm dev:mobile` | `pnpm build:mobile` | Metro sur 8081                    |
+
+Les scripts filtrés construisent les packages nécessaires via Turbo. Pour utiliser une application seule, démarrer aussi l’API centrale ou configurer son URL distante. Les variables `API_URL`, `ADMIN_ORIGIN`, `NEXT_PUBLIC_WEB_ORIGIN` et `EXPO_PUBLIC_API_URL` sont décrites dans [.env.example](.env.example) et les README des applications. Fixer API_URL avant un build Next. Ne jamais copier de secrets serveur dans une variable publique Mobile/Web.
+
+La Phase 2.5 ne modifie ni Prisma ni ses migrations et ne réinitialise aucune base. Les commandes db:migrate du guide d’installation appliquent uniquement les migrations déjà présentes, à utiliser pour une première installation ou des migrations existantes préalablement vérifiées. Aucun déploiement n’est lancé.
+
+[Audit et bilan de réorganisation](docs/phase2.5/AUDIT.md) · [ADR 007](docs/adr/007-four-independent-apps.md) · [Admin](apps/admin/README.md) · [Mobile](apps/mobile/README.md) · [Client API](packages/api-client/README.md)
 
 ## Parcours livré
 
@@ -80,7 +97,7 @@ Rapports : `apps/web/coverage/index.html`, `apps/api/coverage/integration/index.
 
 ## Architecture et sécurité
 
-Monorepo pnpm/Turborepo : `apps/web` (Next App Router, Tailwind, composants shadcn), `apps/api` (Nest modulaire Auth/Learning/AI/Health), `packages/types`, `packages/validation`, `packages/config`, `prisma`, `infra/docker`, `docs` et `.github/workflows`. TypeScript strict. Le répertoire mobile contient uniquement les conventions de la phase ultérieure.
+Monorepo pnpm/Turborepo : `apps/web` (Next App Router, Tailwind, composants shadcn), `apps/api` (Nest modulaire Auth/Learning/AI/Health), `packages/types`, `packages/validation`, `packages/config`, `prisma`, `infra/docker`, `docs` et `.github/workflows`. TypeScript strict. Le workspace mobile contient uniquement le socle Expo et son écran d’attente ; les parcours natifs appartiennent à la Phase 3.
 
 Sessions opaques en cookie HttpOnly/SameSite=Lax, hash du jeton en DB, mots de passe scrypt salés et versionnés. Validation Zod stricte, guards de session, rôle et droits calculés depuis les périodes actives, contrôle de propriété, erreurs `{code,message,details?,requestId}`, limitation des tentatives d’authentification et quotas IA transactionnels. Les mutations requièrent `X-Revynora-Client: web` et une origine autorisée ; le Web appelle le proxy même origine `/api/v1`. La soumission et la sauvegarde sont sérialisées en DB : double soumission identique, modification tardive refusée.
 

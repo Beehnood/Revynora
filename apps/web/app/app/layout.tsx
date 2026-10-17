@@ -14,11 +14,14 @@ export default async function StudentLayout({
   if (!token) redirect("/connexion");
   let response: Response;
   try {
-    response = await fetch("http://127.0.0.1:3001/api/v1/users/me", {
-      headers: { cookie: `revynora_session=${token}` },
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-    });
+    response = await fetch(
+      (process.env.API_URL ?? "http://127.0.0.1:3001") + "/api/v1/users/me",
+      {
+        headers: { cookie: `revynora_session=${token}` },
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      },
+    );
   } catch {
     return <Offline />;
   }

@@ -1,12 +1,12 @@
 "use client";
-import { LoadingState } from "../ui";
+import { LoadingState } from "@revynora/ui";
 import { useState } from "react";
 import Link from "next/link";
 import { api, message } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
-import { Brand } from "../brand";
-import { Card, PageHeader, Alert, Input, FormField, Badge } from "../ui";
-import { Button } from "../ui/button";
+import { Brand } from "@revynora/ui/brand";
+import { Card, PageHeader, Alert, Input, FormField, Badge } from "@revynora/ui";
+import { Button } from "@revynora/ui/button";
 type Person = {
   id: string;
   name: string;
@@ -73,7 +73,11 @@ export function AdminView() {
           <a href="#admin-users">Utilisateurs</a>
           <a href="#admin-events">Événements financiers</a>
           <a href="#admin-audit">Journal d’audit</a>
-          <Link href="/">Site public</Link>
+          <Link
+            href={process.env.NEXT_PUBLIC_WEB_ORIGIN ?? "http://localhost:3000"}
+          >
+            Site public
+          </Link>
           <button
             onClick={async () => {
               await api("/auth/logout", { method: "POST" });

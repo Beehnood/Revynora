@@ -2,20 +2,19 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 export const metadata: Metadata = { robots: { index: false, follow: false } };
-export default async function Layout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function Layout() {
   const token = (await cookies()).get("revynora_session")?.value;
   if (!token) redirect("/connexion");
   let response: Response;
   try {
-    response = await fetch("http://127.0.0.1:3001/api/v1/users/me", {
-      headers: { cookie: "revynora_session=" + token },
-      cache: "no-store",
-      signal: AbortSignal.timeout(5000),
-    });
+    response = await fetch(
+      (process.env.API_URL ?? "http://127.0.0.1:3001") + "/api/v1/users/me",
+      {
+        headers: { cookie: "revynora_session=" + token },
+        cache: "no-store",
+        signal: AbortSignal.timeout(5000),
+      },
+    );
   } catch {
     return (
       <main id="main" className="container section">
@@ -33,5 +32,5 @@ export default async function Layout({
     );
   const user = await response.json();
   if (user.role !== "ADMIN") redirect("/app");
-  return children;
+  redirect(process.env.ADMIN_ORIGIN ?? "http://localhost:3002");
 }

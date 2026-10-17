@@ -37,6 +37,8 @@ export default defineConfig({
       timeout: 30000,
       env: {
         DATABASE_URL: database,
+        ADMIN_ORIGIN: "http://127.0.0.1:3002",
+        WEB_ORIGIN: "http://127.0.0.1:3000",
         AI_PROVIDER: "mock",
         BILLING_PROVIDER: "mock",
         WORKER_ENABLED: "false",
@@ -47,9 +49,20 @@ export default defineConfig({
     },
     {
       command: "pnpm exec next start --hostname 127.0.0.1 --port 3000",
+      env: {
+        ADMIN_ORIGIN: "http://127.0.0.1:3002",
+        API_URL: "http://127.0.0.1:3001",
+      },
       url: "http://127.0.0.1:3000",
       reuseExistingServer: false,
       timeout: 60000,
+    },
+    {
+      command: "pnpm --filter @revynora/admin start",
+      url: "http://127.0.0.1:3002/connexion",
+      reuseExistingServer: false,
+      timeout: 60000,
+      env: { API_URL: "http://127.0.0.1:3001" },
     },
   ],
   reporter: [["list"], ["html", { open: "never" }]],

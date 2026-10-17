@@ -75,7 +75,8 @@ export function TaskHistory({
               <br />
               {new Date(v.startsAt).toLocaleString("fr-FR", {
                 timeZone,
-              })} · {v.status}
+              })}{" "}
+              · {v.status}
             </p>
           ))}
           {data && data.total > data.pageSize && (

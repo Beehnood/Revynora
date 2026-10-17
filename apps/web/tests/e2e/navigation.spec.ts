@@ -5,7 +5,7 @@ async function capture(page: Page, name: string) {
   const width = page.viewportSize()?.width;
   if (width === 375 || width === 1280)
     await page.screenshot({
-      path: `../../docs/phase2/regression-${name}-${width}.png`,
+      path: `../../docs/phase2.5/regression-${name}-${width}.png`,
       fullPage: true,
     });
 }
@@ -126,7 +126,7 @@ for (const width of [320, 375, 768, 1280]) {
     await audit(page);
     if (width === 1280 || width === 375)
       await page.screenshot({
-        path: `../../docs/phase2/regression-resultat-${width}.png`,
+        path: `../../docs/phase2.5/regression-resultat-${width}.png`,
         fullPage: true,
       });
     await page.goto("/app/historique");

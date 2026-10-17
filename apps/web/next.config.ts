@@ -1,12 +1,17 @@
+import { config as loadEnv } from "dotenv";
+import { resolve } from "node:path";
+loadEnv({ path: resolve(process.cwd(), "../../.env"), quiet: true });
 import type { NextConfig } from "next";
 const config: NextConfig = {
-  transpilePackages: ["@revynora/validation"],
+  transpilePackages: ["@revynora/validation", "@revynora/ui"],
   devIndicators: false,
   async rewrites() {
     return [
       {
         source: "/api/v1/:path*",
-        destination: "http://127.0.0.1:3001/api/v1/:path*",
+        destination:
+          (process.env.API_URL ?? "http://127.0.0.1:3001").replace(/\/$/, "") +
+          "/api/v1/:path*",
       },
     ];
   },

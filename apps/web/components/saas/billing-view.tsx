@@ -37,15 +37,16 @@ export function BillingView() {
   const simulation = params.get("simulation");
   const returning = params.get("retour") === "paiement";
   const waiting = returning && current.data?.plan === "FREE";
+  const reloadCurrent = current.reload;
   useEffect(() => {
     if (!waiting) return;
     let attempts = 0;
     const timer = setInterval(() => {
-      if (attempts++ < 15) current.reload();
+      if (attempts++ < 15) reloadCurrent();
       else clearInterval(timer);
     }, 2000);
     return () => clearInterval(timer);
-  }, [waiting, current.reload]);
+  }, [waiting, reloadCurrent]);
   async function act(path: string, body?: unknown) {
     setBusy(true);
     setError("");

@@ -6,11 +6,13 @@ import { loadEnvironment } from "../config/environment";
 import { ApiExceptionFilter } from "./errors";
 export function configureApp(app: INestApplication) {
   const env = loadEnvironment();
-  const origins = new Set([env.WEB_ORIGIN]);
-  if (new URL(env.WEB_ORIGIN).hostname === "localhost")
-    origins.add(env.WEB_ORIGIN.replace("localhost", "127.0.0.1"));
-  if (new URL(env.WEB_ORIGIN).hostname === "127.0.0.1")
-    origins.add(env.WEB_ORIGIN.replace("127.0.0.1", "localhost"));
+  const origins = new Set([env.WEB_ORIGIN, env.ADMIN_ORIGIN]);
+  for (const origin of [env.WEB_ORIGIN, env.ADMIN_ORIGIN]) {
+    if (new URL(origin).hostname === "localhost")
+      origins.add(origin.replace("localhost", "127.0.0.1"));
+    if (new URL(origin).hostname === "127.0.0.1")
+      origins.add(origin.replace("127.0.0.1", "localhost"));
+  }
   app.setGlobalPrefix("api/v1");
   app.enableCors({
     origin: [...origins],
