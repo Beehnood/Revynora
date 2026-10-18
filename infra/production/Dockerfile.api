@@ -1,6 +1,8 @@
 # Build from the repository root. No .env or credentials enter the build context.
 FROM node:22.18.0-bookworm-slim AS build
 RUN apt-get update && apt-get install -y --no-install-recommends openssl ca-certificates && rm -rf /var/lib/apt/lists/*
+# Keep the prepared pnpm readable by the non-root, network-isolated migration stage.
+ENV COREPACK_HOME=/opt/corepack
 RUN corepack enable && corepack prepare pnpm@10.18.3 --activate
 WORKDIR /app
 COPY . .

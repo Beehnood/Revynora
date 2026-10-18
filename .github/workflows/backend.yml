@@ -64,3 +64,6 @@ jobs:
       - run: pnpm test:integration
       - run: pnpm build:api
       - run: docker build -f infra/production/Dockerfile.api --target runtime -t revynora-api:ci .
+      - run: docker build -f infra/production/Dockerfile.api --target migration -t revynora-migrate:ci .
+      - name: Verify non-root migration tooling without network access
+        run: docker run --rm --network none --entrypoint pnpm revynora-migrate:ci --version

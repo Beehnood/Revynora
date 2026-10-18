@@ -16,21 +16,19 @@ test("the production storage adapter uses device-only keychain storage and delet
       plan: "PRO",
       createdAt: "2026-10-17",
     };
-  const fetcher = jest
-    .spyOn(global, "fetch")
-    .mockImplementation(
-      async (input) =>
-        ({
-          ok: true,
-          status: 200,
-          json: async () =>
-            String(input).endsWith("/auth/mobile/login")
-              ? { user, token, expiresAt: "2027-01-01" }
-              : String(input).endsWith("/auth/logout")
-                ? { ok: true }
-                : user,
-        }) as Response,
-    );
+  const fetcher = jest.spyOn(global, "fetch").mockImplementation(
+    async (input) =>
+      ({
+        ok: true,
+        status: 200,
+        json: async () =>
+          String(input).endsWith("/auth/mobile/login")
+            ? { user, token, expiresAt: "2027-01-01" }
+            : String(input).endsWith("/auth/logout")
+              ? { ok: true }
+              : user,
+      }) as Response,
+  );
   jest.mocked(SecureStore.setItemAsync).mockResolvedValue(undefined);
   jest.mocked(SecureStore.deleteItemAsync).mockResolvedValue(undefined);
   const unsubscribe = session.subscribe(jest.fn());

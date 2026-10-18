@@ -1,6 +1,6 @@
 # Plan de déploiement progressif — à valider avant toute intervention distante
 
-Aucune commande de déploiement de ce document n’a été exécutée sur Oracle, Vercel ou EAS. SSH est actuellement refusé, les CLI Vercel/Expo ne sont pas connectées. L’audit de capacité de la VM est donc **non réalisé**. Voir [audit](AUDIT.md).
+Aucune commande de déploiement de ce document n’a été exécutée sur Oracle, Vercel ou EAS. Le dernier contexte fourni par l’utilisateur est : Ubuntu 24.04 ARM64, 1 CPU, 5,8 Gio de RAM, 36 Go disponibles, Nginx 1.24, PostgreSQL 16 et applications Gmilli/AAFPN existantes ; ports 3000/3001 occupés, 3101 libre. Ces informations ne remplacent pas une mesure de capacité disponible sous charge. Aucun accès distant n’a été effectué pendant le nouvel [audit avant déploiement](AUDIT-AVANT-DEPLOIEMENT.md), qui remplace les constats locaux antérieurs. L’[audit initial](AUDIT.md) conserve les limitations d’accès observées à sa date.
 
 ## Architecture préparée
 
@@ -31,6 +31,8 @@ Le script n’utilise pas sudo, ne lit pas les `.env`, n’affiche pas `docker i
 Le budget maximal proposé pour Revynora est 768 Mio API, 1024 Mio PostgreSQL et 256 Mio Redis, avec limites CPU. Ce ne sont pas des réservations ni une preuve que la VM peut les accueillir. Préserver une marge pour le système et les autres projets ; adapter ou refuser le déploiement si la capacité est insuffisante. Confirmer que 3101 est libre, que les noms de site/conteneurs/volumes ne sont pas déjà utilisés, et relever l’architecture CPU. Le build local ne prouve pas la compatibilité de l’architecture distante ; construire sur la VM ou pour sa plateforme vérifiée.
 
 **Point de validation utilisateur :** présenter cet inventaire et les chemins/ports retenus avant toute installation, copie de fichier, changement DNS, migration ou redémarrage.
+
+Sur la VM partagée à un seul cœur, privilégier des images ARM64 préconstruites et testées hors de la VM. Les limites des services ne limitent pas le build ni le conteneur de migration ; les exécuter sans marge mesurée peut perturber les autres applications. Le cache Corepack partagé est requis pour que les migrations non-root fonctionnent sur le réseau privé sans téléchargement de pnpm.
 
 ## 2. Préparer la version et les secrets après validation
 
