@@ -652,6 +652,169 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
       await db.course.deleteMany({ where: { id: { in: [id, privateId] } } });
     }
   });
+  it("G5: supervision agrégée bornée, confidentialité et permissions", async () => {
+    const planId = crypto.randomUUID(),
+      itemId = crypto.randomUUID(),
+      cardId = crypto.randomUUID();
+    const reminderIds = [
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+    ];
+    const from = new Date("2057-01-01"),
+      to = new Date("2057-01-03");
+    const path = "/admin/supervision?from=2057-01-01&to=2057-01-03";
+    try {
+      await db.leitnerCard.create({
+        data: {
+          id: cardId,
+          userId: a.id,
+          front: "SECRET-FRONT-G5",
+          back: "SECRET-BACK-G5",
+        },
+      });
+      await db.revision.createMany({
+        data: [from, to].map((createdAt) => ({
+          userId: a.id,
+          cardId,
+          requestId: crypto.randomUUID(),
+          remembered: true,
+          fromBox: 1,
+          toBox: 2,
+          nextDueAt: to,
+          createdAt,
+        })),
+      });
+      await db.studyPlan.create({
+        data: {
+          id: planId,
+          userId: a.id,
+          title: "SECRET-PLAN-G5",
+          timeZone: "Europe/Paris",
+          createdAt: from,
+        },
+      });
+      await db.studyPlanItem.create({
+        data: {
+          id: itemId,
+          planId,
+          title: "SECRET-ITEM-G5",
+          startsAt: from,
+          endsAt: to,
+          createdAt: from,
+          status: "DONE",
+        },
+      });
+      await db.reminderDelivery.createMany({
+        data: [
+          {
+            id: reminderIds[0]!,
+            itemId,
+            version: 1,
+            dueAt: from,
+            status: "SENT",
+          },
+          {
+            id: reminderIds[1]!,
+            itemId,
+            version: 2,
+            dueAt: to,
+            status: "PENDING",
+          },
+          {
+            id: reminderIds[2]!,
+            itemId: crypto.randomUUID(),
+            version: 1,
+            dueAt: from,
+            status: "PRIVATE-STATUS",
+          },
+        ],
+      });
+      expect((await req(path)).status).toBe(401);
+      expect((await req(path, "GET", undefined, a.cookie)).status).toBe(403);
+      const result = await req(path, "GET", undefined, admin.cookie);
+      expect(result.status).toBe(200);
+      expect(result.data).toEqual({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        timeZone: "UTC",
+        rows: [
+          { category: "ITEMS", status: "DONE", count: 1 },
+          { category: "PLANS", status: "CREATED", count: 1 },
+          { category: "REMINDERS", status: "SENT", count: 1 },
+          { category: "REVIEWS", status: "RECORDED", count: 1 },
+        ],
+      });
+      await db.reminderDelivery.update({
+        where: { id: reminderIds[0] },
+        data: { status: "PRIVATE-STATUS" },
+      });
+      const unknown = await req(path, "GET", undefined, admin.cookie);
+      expect(unknown.data.rows).toContainEqual({
+        category: "REMINDERS",
+        status: "OTHER",
+        count: 1,
+      });
+      const body = JSON.stringify(unknown.data);
+      for (const value of [
+        a.id,
+        cardId,
+        planId,
+        itemId,
+        "SECRET",
+        "PRIVATE-STATUS",
+        "remembered",
+        "startsAt",
+      ])
+        expect(body).not.toContain(value);
+      const empty = await req(
+        "/admin/supervision?from=2058-01-01&to=2058-01-02",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(empty.data.rows).toEqual([
+        { category: "PLANS", status: "CREATED", count: 0 },
+        { category: "REVIEWS", status: "RECORDED", count: 0 },
+      ]);
+      for (const query of [
+        "",
+        "from=bad&to=2057-01-03",
+        "from=2057-01-03&to=2057-01-01",
+        "from=2057-01-01&to=2059-01-01",
+        "from=2057-01-01&to=2057-01-03&userId=" + a.id,
+      ])
+        expect(
+          (
+            await req(
+              "/admin/supervision?" + query,
+              "GET",
+              undefined,
+              admin.cookie,
+            )
+          ).status,
+        ).toBe(400);
+      expect(
+        (
+          await req(
+            "/admin/supervision/" + itemId,
+            "GET",
+            undefined,
+            admin.cookie,
+          )
+        ).status,
+      ).toBe(404);
+      expect(
+        (await req("/admin/supervision", "POST", {}, admin.cookie)).status,
+      ).toBe(404);
+    } finally {
+      await db.reminderDelivery.deleteMany({
+        where: { id: { in: reminderIds } },
+      });
+      await db.studyPlan.deleteMany({ where: { id: planId } });
+      await db.leitnerCard.deleteMany({ where: { id: cardId } });
+    }
+  });
   it("inscription atomique avec historique FREE sans paiement", async () => {
     const history = (
       await req("/subscriptions/history", "GET", undefined, a.cookie)

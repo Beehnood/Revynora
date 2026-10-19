@@ -108,3 +108,14 @@ export type AdminCatalogCourse = {
   createdAt: string;
 };
 export type AdminCatalogCourseDetail = AdminCatalogCourse & { content: string };
+
+export type AdminSupervision = {
+  from: string;
+  to: string;
+  timeZone: "UTC";
+  rows: {
+    category: "REVIEWS" | "PLANS" | "ITEMS" | "REMINDERS";
+    status: string;
+    count: number;
+  }[];
+};

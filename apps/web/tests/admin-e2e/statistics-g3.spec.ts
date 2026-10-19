@@ -9,6 +9,7 @@ if (
   throw new Error("Local test database required");
 const db = new PrismaClient({ datasources: { db: { url } } });
 const ids: string[] = [];
+const supervisionPlan = crypto.randomUUID();
 const password = "G3-Browser-Fixture!42";
 const email = "g3-browser-" + crypto.randomUUID() + "@example.test";
 test.beforeAll(async ({ request }) => {
@@ -22,6 +23,15 @@ test.beforeAll(async ({ request }) => {
   await db.user.update({
     where: { id: u.id },
     data: { role: "ADMIN", createdAt: new Date("2053-01-01") },
+  });
+  await db.studyPlan.create({
+    data: {
+      id: supervisionPlan,
+      userId: u.id,
+      title: "PRIVATE-G5",
+      timeZone: "UTC",
+      createdAt: new Date("2053-01-02"),
+    },
   });
   await db.aIUsage.create({
     data: {
@@ -47,6 +57,7 @@ test.beforeAll(async ({ request }) => {
   });
 });
 test.afterAll(async () => {
+  await db.studyPlan.deleteMany({ where: { id: supervisionPlan } });
   await db.payment.deleteMany({ where: { userId: { in: ids } } });
   await db.user.deleteMany({ where: { id: { in: ids } } });
   await db.$disconnect();
@@ -101,11 +112,38 @@ for (const width of [320, 768, 1280])
       path: info.outputPath("statistics.png"),
       fullPage: true,
     });
+    const supervision = page.getByRole("region", {
+      name: "Supervision agrégée — tableau défilant",
+    });
+    await expect(supervision).toBeVisible();
+    await expect(
+      supervision.getByRole("row").filter({ hasText: "Plans créés" }),
+    ).toContainText("1");
+    await expect(page.getByText("PRIVATE-G5", { exact: true })).toHaveCount(0);
+    await page.route("**/api/v1/admin/supervision?**", (route) =>
+      route.fulfill({
+        status: 503,
+        contentType: "application/json",
+        body: JSON.stringify({ message: "Supervision indisponible" }),
+      }),
+    );
+    await page.reload();
+    await expect(
+      page.getByRole("alert").filter({ hasText: "Supervision indisponible" }),
+    ).toBeVisible();
+    await page.unroute("**/api/v1/admin/supervision?**");
+    await page
+      .getByRole("button", { name: "Réessayer la supervision" })
+      .click();
+    await expect(supervision).toBeVisible();
     await page.getByLabel("Du").fill("2054-01-01");
     await page.getByLabel("Au (exclu)").fill("2054-01-02");
     await page.getByRole("button", { name: "Appliquer la période" }).click();
     await expect(
       page.getByText("Aucune inscription sur cette période.", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("Aucune activité de supervision sur cette période."),
     ).toBeVisible();
     await page.route("**/api/v1/admin/statistics?**", (route) =>
       route.fulfill({

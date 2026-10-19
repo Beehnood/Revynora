@@ -3,6 +3,7 @@ import type { AdminMetrics, AdminEvents, AdminOffer } from "@revynora/types";
 import { accessReasons } from "@/modules/users/access-confirmation";
 import { LoadingState } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
+import { SupervisionPanel } from "@/modules/supervision/supervision-panel";
 import { StatisticsPanel } from "@/modules/statistics/statistics-panel";
 import { useState } from "react";
 import Link from "next/link";
@@ -112,6 +113,7 @@ export function AdminView() {
         </>
       )}
       <StatisticsPanel from={applied.from} to={applied.to} />
+      <SupervisionPanel from={applied.from} to={applied.to} />
       <Card>
         <h2>Gestion des utilisateurs</h2>
         <Link href="/utilisateurs">Consulter les utilisateurs</Link>

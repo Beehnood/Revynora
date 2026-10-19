@@ -32,6 +32,29 @@ const filter = z
 @UseGuards(AdminGuard)
 export class AdminController {
   constructor(@Inject(AdminUseCases) private readonly use: AdminUseCases) {}
+  @Get("supervision")
+  @ApiOperation({
+    summary:
+      "Comptages agrégés uniquement, sans donnée pédagogique individuelle",
+  })
+  @ApiQuery({
+    name: "from",
+    required: true,
+    schema: { type: "string", format: "date" },
+  })
+  @ApiQuery({
+    name: "to",
+    required: true,
+    description: "Fin exclusive UTC",
+    schema: { type: "string", format: "date" },
+  })
+  supervision(@Req() r: AuthRequest, @Query() q: unknown) {
+    const p = parse(adminStatisticsPeriodSchema, q);
+    return this.use.supervision(
+      { from: new Date(p.from), to: new Date(p.to) },
+      r.student.role,
+    );
+  }
   @Get("catalog/courses")
   @ApiOperation({
     summary: "Catalogue éditorial uniquement, aucun contenu privé",

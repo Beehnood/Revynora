@@ -1,3 +1,4 @@
+import { readSupervision } from "./supervision.repository";
 import type { AdminAccessChange, AdminMetrics } from "@revynora/types";
 import { Logger } from "@nestjs/common";
 import { encodeAccessAudit, decodeAccessAudit } from "../domain/audit";
@@ -11,6 +12,9 @@ import type { CatalogQuery } from "../domain/catalog";
 export class PrismaAdminRepository implements AdminRepository {
   private readonly logger = new Logger("AdminAudit");
   constructor(private readonly db: PrismaClient) {}
+  supervision(period: StatisticsPeriod) {
+    return readSupervision(this.db, period);
+  }
   catalogCourses(query: CatalogQuery) {
     return readCatalog(this.db, query);
   }

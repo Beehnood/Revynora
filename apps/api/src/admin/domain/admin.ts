@@ -1,5 +1,6 @@
 import type {
   AdminMetrics,
+  AdminSupervision,
   AdminCatalogCourse,
   AdminCatalogCourseDetail,
   AdminStatistics,
@@ -16,6 +17,7 @@ export type AdminFilter = {
   search: string;
 };
 export interface AdminRepository {
+  supervision(period: { from: Date; to: Date }): Promise<AdminSupervision>;
   catalogCourses(query: {
     page: number;
     search: string;
