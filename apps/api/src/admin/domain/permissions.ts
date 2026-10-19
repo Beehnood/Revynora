@@ -9,6 +9,7 @@ export const adminPermissions = {
   offers: ["read"],
   audit: ["read"],
   courses: [],
+  catalogCourses: ["read"],
   ai: [],
   leitner: [],
   planning: [],

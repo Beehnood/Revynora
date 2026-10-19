@@ -99,3 +99,12 @@ export type AdminStatistics = {
   }[];
   billedAiCostUsd: null;
 };
+
+export type AdminCatalogCourse = {
+  id: string;
+  title: string;
+  domain: string;
+  source: "ADMIN";
+  createdAt: string;
+};
+export type AdminCatalogCourseDetail = AdminCatalogCourse & { content: string };

@@ -10,6 +10,7 @@ import { api, message } from "@/lib/api";
 const links = [
   { href: "/", label: "Vue générale" },
   { href: "/utilisateurs", label: "Utilisateurs" },
+  { href: "/cours", label: "Cours" },
 ];
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();

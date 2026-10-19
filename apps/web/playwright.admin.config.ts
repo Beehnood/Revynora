@@ -8,7 +8,7 @@ if (
   throw new Error("Base locale revynora_test obligatoire");
 export default defineConfig({
   testDir: "./tests/admin-e2e",
-  testMatch: /(?:admin-g2|statistics-g3)\.spec\.ts/,
+  testMatch: /(?:admin-g2|statistics-g3|catalog-g4)\.spec\.ts/,
   workers: 1,
   fullyParallel: false,
   use: { baseURL: "http://127.0.0.1:3412", headless: true },

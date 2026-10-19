@@ -78,3 +78,8 @@
   cursor: pointer;
   padding-block: 1rem;
 }
+.catalog-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}

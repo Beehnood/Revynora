@@ -1,5 +1,6 @@
 import {
   adminAccessChangeSchema,
+  adminCatalogQuerySchema,
   adminStatisticsPeriodSchema,
 } from "@revynora/validation";
 import {
@@ -31,6 +32,31 @@ const filter = z
 @UseGuards(AdminGuard)
 export class AdminController {
   constructor(@Inject(AdminUseCases) private readonly use: AdminUseCases) {}
+  @Get("catalog/courses")
+  @ApiOperation({
+    summary: "Catalogue éditorial uniquement, aucun contenu privé",
+  })
+  @ApiQuery({
+    name: "page",
+    required: false,
+    schema: { type: "integer", minimum: 1, maximum: 10000 },
+  })
+  @ApiQuery({
+    name: "search",
+    required: false,
+    schema: { type: "string", maxLength: 100 },
+  })
+  catalogCourses(@Req() r: AuthRequest, @Query() q: unknown) {
+    return this.use.catalogCourses(
+      parse(adminCatalogQuerySchema, q),
+      r.student.role,
+    );
+  }
+  @Get("catalog/courses/:id")
+  @ApiOperation({ summary: "Consultation d’un cours du catalogue éditorial" })
+  catalogCourse(@Req() r: AuthRequest, @Param("id") id: string) {
+    return this.use.catalogCourse(parse(z.string().uuid(), id), r.student.role);
+  }
   @ApiOperation({
     summary: "Agrégats Admin sur une période UTC de 1 à 366 jours",
   })

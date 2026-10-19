@@ -259,3 +259,10 @@ export const adminStatisticsPeriodSchema = z
     },
     { message: "Choisissez une période de 1 à 366 jours UTC." },
   );
+
+export const adminCatalogQuerySchema = z
+  .object({
+    page: z.coerce.number().int().min(1).max(10000).default(1),
+    search: z.string().trim().max(100).default(""),
+  })
+  .strict();

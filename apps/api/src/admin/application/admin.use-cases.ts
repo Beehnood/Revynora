@@ -3,6 +3,14 @@ import { requireAdminPermission } from "../domain/permissions";
 import type { AdminFilter, AdminRepository } from "../domain/admin";
 export class AdminUseCases {
   constructor(private readonly repo: AdminRepository) {}
+  catalogCourses(query: { page: number; search: string }, role: AdminRole) {
+    requireAdminPermission(role, "catalogCourses", "read");
+    return this.repo.catalogCourses(query);
+  }
+  catalogCourse(id: string, role: AdminRole) {
+    requireAdminPermission(role, "catalogCourses", "read");
+    return this.repo.catalogCourse(id);
+  }
   statistics(period: { from: Date; to: Date }, role: AdminRole) {
     requireAdminPermission(role, "metrics", "read");
     return this.repo.statistics(period);

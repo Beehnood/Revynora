@@ -1,5 +1,7 @@
 import type {
   AdminMetrics,
+  AdminCatalogCourse,
+  AdminCatalogCourseDetail,
   AdminStatistics,
   AdminPage,
   AdminUser,
@@ -14,6 +16,11 @@ export type AdminFilter = {
   search: string;
 };
 export interface AdminRepository {
+  catalogCourses(query: {
+    page: number;
+    search: string;
+  }): Promise<AdminPage<AdminCatalogCourse>>;
+  catalogCourse(id: string): Promise<AdminCatalogCourseDetail>;
   statistics(period: { from: Date; to: Date }): Promise<AdminStatistics>;
   metrics(filter: AdminFilter): Promise<AdminMetrics>;
   users(filter: AdminFilter): Promise<AdminPage<AdminUser>>;

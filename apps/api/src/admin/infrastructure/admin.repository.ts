@@ -6,9 +6,17 @@ import { DomainError, missing } from "../../shared/domain/errors";
 import type { AdminRepository, AdminFilter } from "../domain/admin";
 import { readStatistics } from "./statistics.repository";
 import type { StatisticsPeriod } from "../domain/statistics";
+import { readCatalog, readCatalogCourse } from "./catalog.repository";
+import type { CatalogQuery } from "../domain/catalog";
 export class PrismaAdminRepository implements AdminRepository {
   private readonly logger = new Logger("AdminAudit");
   constructor(private readonly db: PrismaClient) {}
+  catalogCourses(query: CatalogQuery) {
+    return readCatalog(this.db, query);
+  }
+  catalogCourse(id: string) {
+    return readCatalogCourse(this.db, id);
+  }
   statistics(period: StatisticsPeriod) {
     return readStatistics(this.db, period);
   }

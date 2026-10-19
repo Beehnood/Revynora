@@ -343,6 +343,315 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
       await db.payment.deleteMany({ where: { userId: u.id } });
     }
   });
+  it("G4: catalogue strictement global, pagination, recherche littérale et contenu borné", async () => {
+    const tag = "g4-" + crypto.randomUUID();
+    const courseIds = Array.from({ length: 31 }, () => crypto.randomUUID());
+    const common = {
+      domain: "Sciences",
+      content: "Texte du catalogue",
+      createdAt: new Date("2025-01-01"),
+    };
+    try {
+      await db.course.createMany({
+        data: [
+          ...courseIds.slice(0, 23).map((id, i) => ({
+            ...common,
+            id,
+            title: tag + " Titre " + i.toString().padStart(2, "0"),
+            source: "ADMIN" as const,
+            ownerId: null,
+          })),
+          {
+            ...common,
+            id: courseIds[23]!,
+            title: tag + " 100%_",
+            domain: "Matière " + tag,
+            source: "ADMIN",
+            ownerId: null,
+          },
+          {
+            ...common,
+            id: courseIds[24]!,
+            title: tag + " Privé",
+            source: "USER",
+            ownerId: a.id,
+          },
+          {
+            ...common,
+            id: courseIds[25]!,
+            title: tag + " IA privée",
+            source: "AI",
+            ownerId: a.id,
+          },
+          {
+            ...common,
+            id: courseIds[26]!,
+            title: tag + " ADMIN propriétaire",
+            source: "ADMIN",
+            ownerId: a.id,
+          },
+          {
+            ...common,
+            id: courseIds[29]!,
+            title: "Contenu excessif",
+            content: "x".repeat(10001),
+            source: "ADMIN",
+            ownerId: null,
+          },
+          {
+            ...common,
+            id: courseIds[30]!,
+            title: "T".repeat(161),
+            source: "ADMIN",
+            ownerId: null,
+          },
+        ],
+      });
+      for (const [i, source] of [
+        [27, "USER"],
+        [28, "AI"],
+      ] as const)
+        await expect(
+          db.course.create({
+            data: {
+              ...common,
+              id: courseIds[i]!,
+              title: tag + " Sans propriétaire",
+              source,
+              ownerId: null,
+            },
+          }),
+        ).rejects.toThrow();
+      const path = "/admin/catalog/courses";
+      expect((await req(path)).status).toBe(401);
+      expect((await req(path, "GET", undefined, a.cookie)).status).toBe(403);
+      expect((await req(path + "/" + courseIds[0])).status).toBe(401);
+      expect(
+        (await req(path + "/" + courseIds[0], "GET", undefined, a.cookie))
+          .status,
+      ).toBe(403);
+      const first = await req(
+        path + "?search=" + tag.toUpperCase(),
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(first.status).toBe(200);
+      expect(first.data.total).toBe(24);
+      expect(first.data.items).toHaveLength(20);
+      expect(first.data.pageSize).toBe(20);
+      const second = await req(
+        path + "?search=" + tag + "&page=2",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(second.data.items).toHaveLength(4);
+      const all = [...first.data.items, ...second.data.items];
+      expect(new Set(all.map((r: { id: string }) => r.id)).size).toBe(24);
+      for (const row of all) {
+        expect(Object.keys(row).sort()).toEqual(
+          ["id", "title", "domain", "source", "createdAt"].sort(),
+        );
+        expect(row.source).toBe("ADMIN");
+      }
+      expect(JSON.stringify(all)).not.toContain("Privé");
+      const literal = await req(
+        path + "?search=" + encodeURIComponent(tag + " 100%_"),
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(literal.status).toBe(200);
+      expect(literal.data.total).toBe(1);
+      const subject = await req(
+        path + "?search=" + encodeURIComponent("MATIÈRE " + tag),
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(subject.status).toBe(200);
+      expect(subject.data.total).toBe(1);
+      expect(
+        (
+          await req(
+            path + "?search=" + "T".repeat(100),
+            "GET",
+            undefined,
+            admin.cookie,
+          )
+        ).status,
+      ).toBe(422);
+      const detail = await req(
+        path + "/" + courseIds[0],
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(detail.status).toBe(200);
+      expect(Object.keys(detail.data).sort()).toEqual(
+        ["id", "title", "domain", "source", "createdAt", "content"].sort(),
+      );
+      expect(detail.data.content).toBe(common.content);
+      for (const id of [...courseIds.slice(24, 29), crypto.randomUUID()])
+        expect(
+          (await req(path + "/" + id, "GET", undefined, admin.cookie)).status,
+        ).toBe(404);
+      expect(
+        (await req(path + "/" + courseIds[29], "GET", undefined, admin.cookie))
+          .status,
+      ).toBe(422);
+      expect(
+        (await req(path + "/" + courseIds[30], "GET", undefined, admin.cookie))
+          .status,
+      ).toBe(422);
+      expect(
+        (await req(path + "/invalid", "GET", undefined, admin.cookie)).status,
+      ).toBe(400);
+      for (const query of [
+        "page=0",
+        "page=10001",
+        "search=" + "x".repeat(101),
+        "source=USER",
+        "ownerId=" + a.id,
+        "pageSize=100",
+      ])
+        expect(
+          (await req(path + "?" + query, "GET", undefined, admin.cookie))
+            .status,
+        ).toBe(400);
+      const empty = await req(
+        path + "?search=" + tag + "&page=3",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(empty.data.items).toEqual([]);
+      expect(empty.data.total).toBe(24);
+      expect(
+        (
+          await req(
+            path + "?search=" + crypto.randomUUID(),
+            "GET",
+            undefined,
+            admin.cookie,
+          )
+        ).data.total,
+      ).toBe(0);
+      for (const method of ["POST", "PATCH", "DELETE"])
+        expect(
+          (
+            await req(
+              path + "/" + courseIds[0],
+              method,
+              undefined,
+              admin.cookie,
+            )
+          ).status,
+        ).toBe(404);
+      expect(
+        (await req("/courses", "GET", undefined, admin.cookie)).status,
+      ).toBe(403);
+      expect(
+        (
+          await req(
+            "/courses",
+            "POST",
+            {
+              title: "Faux catalogue",
+              domain: "Sciences",
+              content: "Texte privé",
+              source: "ADMIN",
+              ownerId: null,
+            },
+            a.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    } finally {
+      await db.course.deleteMany({ where: { id: { in: courseIds } } });
+    }
+  });
+  it("G4: bornes SQL/UTF-16 exactes, erreur explicite sans page partielle ni fuite privée", async () => {
+    const id = crypto.randomUUID();
+    const privateId = crypto.randomUUID();
+    const tag = "unicode-" + crypto.randomUUID();
+    const path = "/admin/catalog/courses";
+    const read = (suffix: string) =>
+      req(path + suffix, "GET", undefined, admin.cookie);
+    try {
+      await db.course.create({
+        data: {
+          id,
+          source: "ADMIN",
+          ownerId: null,
+          title: tag,
+          domain: "Sciences",
+          content: "Texte",
+        },
+      });
+      await db.course.create({
+        data: {
+          id: privateId,
+          source: "USER",
+          ownerId: a.id,
+          title: tag,
+          domain: "x".repeat(81),
+          content: "PRIVE-UNICODE",
+        },
+      });
+      for (const [field, limit] of [
+        ["title", 160],
+        ["domain", 80],
+        ["content", 10000],
+      ] as const) {
+        for (const unit of ["a", "😀", "𐐀", "e\u0301"]) {
+          const exact = unit.repeat(limit / unit.length);
+          await db.course.update({
+            where: { id },
+            data: {
+              title: tag,
+              domain: "Sciences",
+              content: "Texte",
+              [field]: exact,
+            },
+          });
+          const detail = await read("/" + id);
+          expect(detail.status).toBe(200);
+          expect(detail.data[field]).toBe(exact);
+          const search = field === "title" ? unit : tag;
+          const list = await read("?search=" + encodeURIComponent(search));
+          expect(list.status).toBe(200);
+          expect(
+            list.data.items.some((row: { id: string }) => row.id === id),
+          ).toBe(true);
+          await db.course.update({
+            where: { id },
+            data: { [field]: exact + "a" },
+          });
+          const excessive = await read("/" + id);
+          expect(excessive.status).toBe(422);
+          expect(JSON.stringify(excessive.data)).toContain(
+            "limites de consultation",
+          );
+          const page = await read("?search=" + encodeURIComponent(search));
+          if (field === "content") expect(page.status).toBe(200);
+          else {
+            expect(page.status).toBe(422);
+            expect(page.data.items).toBeUndefined();
+            expect(JSON.stringify(page.data)).toContain(
+              "limites de consultation",
+            );
+          }
+          const hidden = await read("/" + privateId);
+          expect(hidden.status).toBe(404);
+          expect(JSON.stringify(hidden.data)).not.toContain("PRIVE-UNICODE");
+        }
+      }
+    } finally {
+      await db.course.deleteMany({ where: { id: { in: [id, privateId] } } });
+    }
+  });
   it("inscription atomique avec historique FREE sans paiement", async () => {
     const history = (
       await req("/subscriptions/history", "GET", undefined, a.cookie)
