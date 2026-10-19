@@ -69,3 +69,33 @@ export type AdminEvents = AdminPage<{
   amountCents: number | null;
   createdAt: string;
 }> & { audit: AdminAuditRecord[] };
+
+export type AdminStatistics = {
+  from: string;
+  to: string;
+  timeZone: "UTC";
+  registrations: { date: string; count: number }[];
+  subscriptions: {
+    offer: "FREE" | "PLUS" | "PRO";
+    status: string;
+    periods: number;
+  }[];
+  ai: {
+    provider: string;
+    status: string;
+    requests: number;
+    inputTokens: string;
+    outputTokens: string;
+    estimatedCostUsd: string | null;
+    estimatedRequests: number;
+  }[];
+  payments: {
+    provider: string;
+    environment: "SIMULATION" | "UNVERIFIED";
+    currency: string;
+    status: string;
+    count: number;
+    amountCents: string;
+  }[];
+  billedAiCostUsd: null;
+};

@@ -24,6 +24,12 @@ vi.mock("../lib/api", async (original) => ({
 beforeEach(() => {
   vi.clearAllMocks();
   m.data.clear();
+  m.data.set("/admin/statistics", {
+    registrations: [],
+    subscriptions: [],
+    ai: [],
+    payments: [],
+  });
   m.error = "";
   m.loading = false;
   vi.mocked(api).mockResolvedValue({});

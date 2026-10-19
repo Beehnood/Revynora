@@ -244,3 +244,18 @@ export const aiPlanningConfirmSchema = z
     requestId: z.uuid(),
   })
   .strict();
+
+// Calendar dates are interpreted at UTC midnight; the upper bound is exclusive.
+export const adminStatisticsPeriodSchema = z
+  .object({
+    from: z.iso.date(),
+    to: z.iso.date(),
+  })
+  .strict()
+  .refine(
+    ({ from, to }) => {
+      const days = (Date.parse(to) - Date.parse(from)) / 86400000;
+      return days > 0 && days <= 366;
+    },
+    { message: "Choisissez une période de 1 à 366 jours UTC." },
+  );

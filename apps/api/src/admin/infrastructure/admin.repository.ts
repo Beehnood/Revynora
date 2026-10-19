@@ -4,9 +4,14 @@ import { encodeAccessAudit, decodeAccessAudit } from "../domain/audit";
 import type { PrismaClient } from "@prisma/client";
 import { DomainError, missing } from "../../shared/domain/errors";
 import type { AdminRepository, AdminFilter } from "../domain/admin";
+import { readStatistics } from "./statistics.repository";
+import type { StatisticsPeriod } from "../domain/statistics";
 export class PrismaAdminRepository implements AdminRepository {
   private readonly logger = new Logger("AdminAudit");
   constructor(private readonly db: PrismaClient) {}
+  statistics(period: StatisticsPeriod) {
+    return readStatistics(this.db, period);
+  }
   async metrics(f: AdminFilter): Promise<AdminMetrics> {
     const createdAt = { gte: f.from, lt: f.to };
     const [users, newUsers, payments, ai, statuses] =

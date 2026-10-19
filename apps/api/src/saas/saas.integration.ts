@@ -2,6 +2,7 @@
 import "reflect-metadata";
 import { beforeAll, afterAll, describe, it, expect, vi } from "vitest";
 import { Logger } from "@nestjs/common";
+import { readStatistics } from "../admin/infrastructure/statistics.repository";
 import { PrismaAdminRepository } from "../admin/infrastructure/admin.repository";
 import { decodeAccessAudit } from "../admin/domain/audit";
 import { Test } from "@nestjs/testing";
@@ -160,6 +161,187 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         )
       ).status,
     ).toBe(404);
+  });
+  it("G3: agrégats privés exacts, jours UTC, devises et simulations séparés", async () => {
+    const u = await register("g3-statistics");
+    const end = await register("g3-end-boundary");
+    await db.user.update({
+      where: { id: u.id },
+      data: { createdAt: new Date("2051-01-01T00:00:00Z") },
+    });
+    await db.user.update({
+      where: { id: end.id },
+      data: { createdAt: new Date("2051-01-04T00:00:00Z") },
+    });
+    const offer = await db.subscription.findUniqueOrThrow({
+      where: { code: "PLUS" },
+    });
+    await db.userSubscriptionHistory.create({
+      data: {
+        userId: u.id,
+        subscriptionId: offer.id,
+        provider: "mock",
+        providerSubscriptionId: crypto.randomUUID(),
+        priceCents: 250,
+        currency: "eur",
+        status: "CANCELLED",
+        startsAt: new Date("2051-01-02"),
+        endsAt: new Date("2051-02-02"),
+      },
+    });
+    await db.aIUsage.createMany({
+      data: [
+        {
+          userId: u.id,
+          provider: "mock",
+          status: "SUCCESS",
+          createdAt: new Date("2051-01-01"),
+          estimatedCostUsd: null,
+        },
+        {
+          userId: u.id,
+          provider: "openai",
+          status: "ERROR",
+          createdAt: new Date("2051-01-03T23:59:59Z"),
+          inputTokens: 23,
+          outputTokens: 5,
+          estimatedCostUsd: "0.00012345",
+        },
+        {
+          userId: u.id,
+          provider: "openai",
+          status: "SUCCESS",
+          createdAt: new Date("2051-01-04"),
+          estimatedCostUsd: "99",
+        },
+      ],
+    });
+    try {
+      for (const [provider, currency, amountCents, status] of [
+        ["mock", "eur", 250, "PAID"],
+        ["stripe", "eur", 500, "PAID"],
+        ["stripe", "usd", 700, "PAID"],
+        ["stripe", "eur", 100, "FAILED"],
+      ] as const)
+        await db.payment.create({
+          data: {
+            userId: u.id,
+            provider,
+            currency,
+            amountCents,
+            status,
+            providerReference: crypto.randomUUID(),
+            createdAt: new Date("2051-01-02"),
+          },
+        });
+      const path = "/admin/statistics?from=2051-01-01&to=2051-01-04";
+      expect((await req(path)).status).toBe(401);
+      expect((await req(path, "GET", undefined, u.cookie)).status).toBe(403);
+      const r = await req(path, "GET", undefined, admin.cookie);
+      expect(r.status).toBe(200);
+      expect(r.data.registrations).toEqual([
+        { date: "2051-01-01", count: 1 },
+        { date: "2051-01-02", count: 0 },
+        { date: "2051-01-03", count: 0 },
+      ]);
+      expect(r.data.subscriptions).toEqual([
+        { offer: "PLUS", status: "CANCELLED", periods: 1 },
+      ]);
+      expect(r.data.ai).toEqual([
+        {
+          provider: "mock",
+          status: "SUCCESS",
+          requests: 1,
+          inputTokens: "0",
+          outputTokens: "0",
+          estimatedCostUsd: null,
+          estimatedRequests: 0,
+        },
+        {
+          provider: "openai",
+          status: "ERROR",
+          requests: 1,
+          inputTokens: "23",
+          outputTokens: "5",
+          estimatedCostUsd: "0.00012345",
+          estimatedRequests: 1,
+        },
+      ]);
+      expect(r.data.payments).toHaveLength(4);
+      expect(r.data.payments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            provider: "mock",
+            environment: "SIMULATION",
+            currency: "eur",
+            amountCents: "250",
+          }),
+          expect.objectContaining({
+            provider: "stripe",
+            environment: "UNVERIFIED",
+            currency: "usd",
+            amountCents: "700",
+          }),
+          expect.objectContaining({
+            provider: "stripe",
+            status: "FAILED",
+            amountCents: "100",
+          }),
+        ]),
+      );
+      const shiftedSession = {
+        $transaction: async <T>(
+          work: (
+            tx: import("@prisma/client").Prisma.TransactionClient,
+          ) => Promise<T>,
+          options?: {
+            isolationLevel?: import("@prisma/client").Prisma.TransactionIsolationLevel;
+            maxWait?: number;
+            timeout?: number;
+          },
+        ) =>
+          db.$transaction(async (tx) => {
+            await tx.$executeRaw`SET LOCAL TIME ZONE 'Pacific/Auckland'`;
+            return work(tx);
+          }, options),
+      } as unknown as PrismaClient;
+      const shifted = await readStatistics(shiftedSession, {
+        from: new Date("2051-01-01"),
+        to: new Date("2051-01-04"),
+      });
+      expect(shifted).toEqual(r.data);
+      expect(r.data.billedAiCostUsd).toBeNull();
+      expect(JSON.stringify(r.data)).not.toContain(u.id);
+      const empty = await req(
+        "/admin/statistics?from=2052-01-01&to=2052-01-02",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(empty.data.ai).toEqual([]);
+      expect(empty.data.payments).toEqual([]);
+      expect(empty.data.registrations).toEqual([
+        { date: "2052-01-01", count: 0 },
+      ]);
+      for (const query of [
+        "from=2051-01-01&to=2053-01-01",
+        "from=2051-01-02&to=2051-01-01",
+        "from=bad&to=2051-01-01",
+        "from=2051-01-01&to=2051-01-02&userId=" + u.id,
+      ])
+        expect(
+          (
+            await req(
+              "/admin/statistics?" + query,
+              "GET",
+              undefined,
+              admin.cookie,
+            )
+          ).status,
+        ).toBe(400);
+    } finally {
+      await db.payment.deleteMany({ where: { userId: u.id } });
+    }
   });
   it("inscription atomique avec historique FREE sans paiement", async () => {
     const history = (

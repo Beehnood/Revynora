@@ -3,6 +3,10 @@ import { requireAdminPermission } from "../domain/permissions";
 import type { AdminFilter, AdminRepository } from "../domain/admin";
 export class AdminUseCases {
   constructor(private readonly repo: AdminRepository) {}
+  statistics(period: { from: Date; to: Date }, role: AdminRole) {
+    requireAdminPermission(role, "metrics", "read");
+    return this.repo.statistics(period);
+  }
   metrics(f: AdminFilter, role: AdminRole) {
     requireAdminPermission(role, "metrics", "read");
     return this.repo.metrics(f);

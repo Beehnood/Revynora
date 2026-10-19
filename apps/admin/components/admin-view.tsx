@@ -3,6 +3,7 @@ import type { AdminMetrics, AdminEvents, AdminOffer } from "@revynora/types";
 import { accessReasons } from "@/modules/users/access-confirmation";
 import { LoadingState } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
+import { StatisticsPanel } from "@/modules/statistics/statistics-panel";
 import { useState } from "react";
 import Link from "next/link";
 import { useResource } from "@/lib/use-resource";
@@ -15,7 +16,10 @@ export function AdminView() {
     [to, setTo] = useState(() =>
       new Date(Date.now() + 86400000).toISOString().slice(0, 10),
     );
-  const period = "?from=" + from + "&to=" + to + "&page=" + page;
+  const [applied, setApplied] = useState({ from, to });
+  const [periodError, setPeriodError] = useState("");
+  const period =
+    "?from=" + applied.from + "&to=" + applied.to + "&page=" + page;
   const metrics = useResource<AdminMetrics>("/admin/metrics" + period),
     events = useResource<AdminEvents>("/admin/events" + period),
     offers = useResource<AdminOffer[]>("/admin/offers");
@@ -32,7 +36,20 @@ export function AdminView() {
         </Alert>
       )}
       <Card>
-        <div className="saas-actions">
+        <form
+          className="saas-actions"
+          onSubmit={(e) => {
+            e.preventDefault();
+            const days = (Date.parse(to) - Date.parse(from)) / 86400000;
+            if (!Number.isInteger(days) || days < 1 || days > 366) {
+              setPeriodError("Choisissez une période de 1 à 366 jours UTC.");
+              return;
+            }
+            setPeriodError("");
+            setPage(1);
+            setApplied({ from, to });
+          }}
+        >
           <FormField id="admin-from" label="Du">
             <Input
               id="admin-from"
@@ -53,7 +70,13 @@ export function AdminView() {
               }}
             />
           </FormField>
-        </div>
+          <Button type="submit">Appliquer la période</Button>
+        </form>
+        {periodError && <Alert role="alert">{periodError}</Alert>}
+        <p>
+          Intervalle UTC, début inclus et fin exclue. Le total des utilisateurs
+          est le nombre actuel, indépendamment de la période.
+        </p>
       </Card>
       {metrics.data && (
         <>
@@ -64,7 +87,7 @@ export function AdminView() {
               <p>{metrics.data.newUsers} inscriptions sur la période</p>
             </Card>
             <Card>
-              <Badge>Sessions IA</Badge>
+              <Badge>Requêtes IA enregistrées</Badge>
               <h2>{metrics.data.ai._count}</h2>
               <p>
                 Coût estimé :{" "}
@@ -77,31 +100,18 @@ export function AdminView() {
                 Facturation :{" "}
                 {metrics.data.billingMode === "mock"
                   ? "simulation locale"
-                  : "Stripe test"}
+                  : metrics.data.billingMode === "stripe"
+                    ? "Stripe test (adaptateur actuel)"
+                    : "mode non reconnu"}
               </p>
               <p>
                 Worker : {metrics.data.workerEnabled ? "activé" : "désactivé"}
               </p>
             </Card>
           </div>
-          <Card>
-            <h2>Paiements sur la période</h2>
-            {metrics.data.payments.length === 0 && <p>Aucun paiement.</p>}
-            {metrics.data.payments.map((p) => (
-              <div className="saas-row" key={p.provider + p.status}>
-                <span>
-                  {p.provider === "mock" ? "Simulation" : "Stripe test"} ·{" "}
-                  {p.status}
-                </span>
-                <strong>
-                  {((p._sum.amountCents ?? 0) / 100).toFixed(2)} € · {p._count}{" "}
-                  événements
-                </strong>
-              </div>
-            ))}
-          </Card>
         </>
       )}
+      <StatisticsPanel from={applied.from} to={applied.to} />
       <Card>
         <h2>Gestion des utilisateurs</h2>
         <Link href="/utilisateurs">Consulter les utilisateurs</Link>

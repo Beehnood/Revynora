@@ -1,5 +1,6 @@
 import type {
   AdminMetrics,
+  AdminStatistics,
   AdminPage,
   AdminUser,
   AdminEvents,
@@ -13,6 +14,7 @@ export type AdminFilter = {
   search: string;
 };
 export interface AdminRepository {
+  statistics(period: { from: Date; to: Date }): Promise<AdminStatistics>;
   metrics(filter: AdminFilter): Promise<AdminMetrics>;
   users(filter: AdminFilter): Promise<AdminPage<AdminUser>>;
   user(id: string): Promise<AdminUser>;

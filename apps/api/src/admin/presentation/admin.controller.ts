@@ -1,4 +1,7 @@
-import { adminAccessChangeSchema } from "@revynora/validation";
+import {
+  adminAccessChangeSchema,
+  adminStatisticsPeriodSchema,
+} from "@revynora/validation";
 import {
   Body,
   Controller,
@@ -11,6 +14,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
+import { ApiQuery, ApiOperation } from "@nestjs/swagger";
 import { AdminGuard } from "../../auth/session.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
@@ -27,6 +31,28 @@ const filter = z
 @UseGuards(AdminGuard)
 export class AdminController {
   constructor(@Inject(AdminUseCases) private readonly use: AdminUseCases) {}
+  @ApiOperation({
+    summary: "Agrégats Admin sur une période UTC de 1 à 366 jours",
+  })
+  @ApiQuery({
+    name: "from",
+    required: true,
+    schema: { type: "string", format: "date" },
+  })
+  @ApiQuery({
+    name: "to",
+    required: true,
+    description: "Fin exclusive UTC",
+    schema: { type: "string", format: "date" },
+  })
+  @Get("statistics")
+  statistics(@Req() r: AuthRequest, @Query() q: unknown) {
+    const p = parse(adminStatisticsPeriodSchema, q);
+    return this.use.statistics(
+      { from: new Date(p.from), to: new Date(p.to) },
+      r.student.role,
+    );
+  }
   @Get("metrics") metrics(@Req() r: AuthRequest, @Query() q: unknown) {
     return this.use.metrics(parse(filter, q), r.student.role);
   }
