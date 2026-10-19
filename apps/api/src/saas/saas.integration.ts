@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- HTTP assertions inspect heterogeneous JSON responses. */
 import "reflect-metadata";
-import { beforeAll, afterAll, describe, it, expect } from "vitest";
+import { beforeAll, afterAll, describe, it, expect, vi } from "vitest";
+import { Logger } from "@nestjs/common";
+import { PrismaAdminRepository } from "../admin/infrastructure/admin.repository";
+import { decodeAccessAudit } from "../admin/domain/audit";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
@@ -101,6 +104,9 @@ afterAll(async () => {
     });
     await db.reminderDelivery.deleteMany({
       where: { itemId: { in: plans.map((x) => x.id) } },
+    });
+    await db.auditLog.deleteMany({
+      where: { OR: [{ actorId: { in: ids } }, { targetUserId: { in: ids } }] },
     });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.mockBillingRecord.deleteMany({
@@ -779,12 +785,45 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         )
       ).status,
     ).toBe(400);
+    const before = await db.auditLog.count({ where: { targetUserId: b.id } });
+    for (const body of [
+      { disabled: true },
+      { disabled: true, confirmed: false, reason: "SECURITY_REVIEW" },
+      {
+        disabled: true,
+        confirmed: true,
+        reason: "personal email@example.test",
+      },
+    ]) {
+      expect(
+        (await req("/admin/users/" + b.id, "PATCH", body, admin.cookie)).status,
+      ).toBe(400);
+    }
+    expect(await db.auditLog.count({ where: { targetUserId: b.id } })).toBe(
+      before,
+    );
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: b.id } })).disabledAt,
+    ).toBeNull();
+    expect((await req("/users/me", "GET", undefined, b.cookie)).status).toBe(
+      200,
+    );
+    expect(
+      (
+        await req(
+          "/admin/users/" + b.id,
+          "PATCH",
+          { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(403);
     expect(
       (
         await req(
           "/admin/users/" + admin.id,
           "PATCH",
-          { disabled: true },
+          { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
           admin.cookie,
         )
       ).status,
@@ -794,11 +833,25 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         await req(
           "/admin/users/" + b.id,
           "PATCH",
-          { disabled: true },
+          { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
           admin.cookie,
         )
       ).status,
     ).toBe(200);
+    const audit = await req("/admin/events", "GET", undefined, admin.cookie);
+    expect(audit.data.audit).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actorId: admin.id,
+          targetUserId: b.id,
+          action: "USER_DISABLED",
+          reason: "SECURITY_REVIEW",
+          result: "SUCCESS",
+        }),
+        expect.objectContaining({ targetUserId: admin.id, result: "REJECTED" }),
+      ]),
+    );
+    expect(JSON.stringify(audit.data.audit)).not.toContain("passwordHash");
     expect((await req("/users/me", "GET", undefined, b.cookie)).status).toBe(
       401,
     );
@@ -807,11 +860,102 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         await req(
           "/admin/users/" + b.id,
           "PATCH",
-          { disabled: false },
+          { disabled: false, confirmed: true, reason: "REVIEW_COMPLETED" },
           admin.cookie,
         )
       ).status,
     ).toBe(200);
+  });
+  it("sérialise deux suspensions concurrentes, conserve les deux auteurs et ne restaure aucune session", async () => {
+    const target = await register("ConcurrentTarget");
+    const second = await register("ConcurrentAdmin");
+    await db.user.update({ where: { id: second.id }, data: { role: "ADMIN" } });
+    const results = await Promise.all([
+      req(
+        "/admin/users/" + target.id,
+        "PATCH",
+        { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
+        admin.cookie,
+      ),
+      req(
+        "/admin/users/" + target.id,
+        "PATCH",
+        { disabled: true, confirmed: true, reason: "POLICY_REVIEW" },
+        second.cookie,
+      ),
+    ]);
+    expect(results.map((r) => r.status)).toEqual([200, 200]);
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: target.id } }))
+        .disabledAt,
+    ).not.toBeNull();
+    expect(await db.session.count({ where: { userId: target.id } })).toBe(0);
+    const rows = await db.auditLog.findMany({
+      where: { targetUserId: target.id },
+    });
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.actorId))).toEqual(
+      new Set([admin.id, second.id]),
+    );
+    expect(rows.map((r) => decodeAccessAudit(r.action))).toEqual(
+      expect.arrayContaining([
+        {
+          action: "USER_DISABLED",
+          reason: "SECURITY_REVIEW",
+          result: "SUCCESS",
+        },
+        { action: "USER_DISABLED", reason: "POLICY_REVIEW", result: "SUCCESS" },
+      ]),
+    );
+    expect(
+      (await req("/users/me", "GET", undefined, target.cookie)).status,
+    ).toBe(401);
+    expect(
+      (
+        await req(
+          "/admin/users/" + target.id,
+          "PATCH",
+          { disabled: false, confirmed: true, reason: "REVIEW_COMPLETED" },
+          admin.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: target.id } }))
+        .disabledAt,
+    ).toBeNull();
+    expect(
+      (await req("/users/me", "GET", undefined, target.cookie)).status,
+    ).toBe(401);
+  });
+  it("rollback réel : l’échec de l’audit atomique ne suspend pas le compte ni ne révoque sa session", async () => {
+    const target = await register("AuditRollback");
+    const log = vi
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => {});
+    try {
+      // A nonexistent actor forces the audit foreign-key constraint to fail, without changing the schema.
+      await expect(
+        new PrismaAdminRepository(db).disable(crypto.randomUUID(), target.id, {
+          disabled: true,
+          confirmed: true,
+          reason: "SECURITY_REVIEW",
+        }),
+      ).rejects.toMatchObject({ code: "P2003" });
+      expect(log).toHaveBeenCalledOnce();
+      expect(
+        (await db.user.findUniqueOrThrow({ where: { id: target.id } }))
+          .disabledAt,
+      ).toBeNull();
+      expect(
+        (await req("/users/me", "GET", undefined, target.cookie)).status,
+      ).toBe(200);
+      expect(
+        await db.auditLog.count({ where: { targetUserId: target.id } }),
+      ).toBe(0);
+    } finally {
+      log.mockRestore();
+    }
   });
   it("export privé, suppression et anonymisation préservent les faits financiers", async () => {
     const exp = await req("/privacy/export", "GET", undefined, a.cookie);

@@ -1,5 +1,5 @@
 import { readFileSync, readdirSync } from "node:fs";
-import { join } from "node:path";
+import { join, dirname, resolve, relative, isAbsolute } from "node:path";
 function walk(dir) {
   return readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
     [
@@ -26,10 +26,20 @@ for (const file of [...walk("apps"), ...walk("packages")].filter((f) =>
     /(?:from\s*|import\s*\(|require\s*\()\s*['"]([^'"]+)['"]/g,
   )) {
     const target = match[1];
-    if (
-      /(?:\.\.\/)+(?:apps\/)?(?:web|admin|api|mobile)\//.test(target) ||
-      /apps\/(web|api|admin|mobile)\//.test(target)
-    )
+    const sourceApp = /^apps\/(web|api|admin|mobile)\//.exec(
+      file.replaceAll("\\", "/"),
+    )?.[1];
+    const resolved =
+      target.startsWith(".") || isAbsolute(target)
+        ? relative(process.cwd(), resolve(dirname(file), target)).replaceAll(
+            "\\",
+            "/",
+          )
+        : target;
+    const targetApp =
+      /^apps\/(web|api|admin|mobile)\//.exec(resolved)?.[1] ??
+      /^@revynora\/(web|api|admin|mobile)(?:\/|$)/.exec(target)?.[1];
+    if (targetApp && targetApp !== sourceApp)
       errors.push(file + " imports another application: " + target);
     if (
       file.startsWith("packages/api-client/") &&

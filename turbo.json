@@ -24,6 +24,8 @@
   },
   "globalEnv": [
     "API_URL",
+    "VERCEL",
+    "VERCEL_ENV",
     "WEB_ORIGIN",
     "ADMIN_ORIGIN",
     "NEXT_PUBLIC_WEB_ORIGIN",

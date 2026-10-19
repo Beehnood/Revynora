@@ -221,6 +221,19 @@ export const planningAiOutputSchema = z
       .max(20),
   })
   .strict();
+export const adminAccessChangeSchema = z
+  .object({
+    disabled: z.boolean(),
+    confirmed: z.literal(true),
+    reason: z.enum([
+      "SECURITY_REVIEW",
+      "POLICY_REVIEW",
+      "USER_REQUEST",
+      "REVIEW_COMPLETED",
+    ]),
+  })
+  .strict();
+
 export const aiPlanningRequestSchema = z
   .object({ timeZone: timeZoneSchema })
   .strict();

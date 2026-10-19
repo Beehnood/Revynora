@@ -44,12 +44,17 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm check:boundaries
+      - run: node --test scripts/check-boundaries.test.mjs
       - run: pnpm check:prisma-integrity
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
+        env:
+          API_URL: http://127.0.0.1:3001
       - run: pnpm test:coverage
       - run: pnpm build
+        env:
+          API_URL: http://127.0.0.1:3001
       - run: pnpm --filter @revynora/mobile exec expo install --check
       - run: pnpm --filter @revynora/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e

@@ -1,3 +1,11 @@
+import type {
+  AdminMetrics,
+  AdminPage,
+  AdminUser,
+  AdminEvents,
+  AdminOffer,
+  AdminAccessChange,
+} from "@revynora/types";
 export type AdminFilter = {
   from: Date;
   to: Date;
@@ -5,9 +13,13 @@ export type AdminFilter = {
   search: string;
 };
 export interface AdminRepository {
-  metrics(filter: AdminFilter): Promise<unknown>;
-  users(filter: AdminFilter): Promise<unknown>;
-  events(filter: AdminFilter): Promise<unknown>;
-  offers(): Promise<unknown>;
-  disable(actor: string, user: string, disabled: boolean): Promise<unknown>;
+  metrics(filter: AdminFilter): Promise<AdminMetrics>;
+  users(filter: AdminFilter): Promise<AdminPage<AdminUser>>;
+  events(filter: AdminFilter): Promise<AdminEvents>;
+  offers(): Promise<AdminOffer[]>;
+  disable(
+    actor: string,
+    user: string,
+    command: AdminAccessChange,
+  ): Promise<{ ok: true }>;
 }

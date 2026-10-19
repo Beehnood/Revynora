@@ -1,3 +1,4 @@
+import { adminAccessChangeSchema } from "@revynora/validation";
 import {
   Body,
   Controller,
@@ -26,17 +27,17 @@ const filter = z
 @UseGuards(AdminGuard)
 export class AdminController {
   constructor(@Inject(AdminUseCases) private readonly use: AdminUseCases) {}
-  @Get("metrics") metrics(@Query() q: unknown) {
-    return this.use.metrics(parse(filter, q));
+  @Get("metrics") metrics(@Req() r: AuthRequest, @Query() q: unknown) {
+    return this.use.metrics(parse(filter, q), r.student.role);
   }
-  @Get("users") users(@Query() q: unknown) {
-    return this.use.users(parse(filter, q));
+  @Get("users") users(@Req() r: AuthRequest, @Query() q: unknown) {
+    return this.use.users(parse(filter, q), r.student.role);
   }
-  @Get("events") events(@Query() q: unknown) {
-    return this.use.events(parse(filter, q));
+  @Get("events") events(@Req() r: AuthRequest, @Query() q: unknown) {
+    return this.use.events(parse(filter, q), r.student.role);
   }
-  @Get("offers") offers() {
-    return this.use.offers();
+  @Get("offers") offers(@Req() r: AuthRequest) {
+    return this.use.offers(r.student.role);
   }
   @Patch("users/:id") disable(
     @Req() r: AuthRequest,
@@ -44,9 +45,9 @@ export class AdminController {
     @Body() b: unknown,
   ) {
     return this.use.disable(
-      r.student.id,
+      r.student,
       parse(z.string().uuid(), id),
-      parse(z.object({ disabled: z.boolean() }).strict(), b).disabled,
+      parse(adminAccessChangeSchema, b),
     );
   }
 }

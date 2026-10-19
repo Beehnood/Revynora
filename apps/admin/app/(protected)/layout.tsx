@@ -1,3 +1,5 @@
+import Link from "next/link";
+import { readAdminSession } from "@/lib/admin-session";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
@@ -8,34 +10,17 @@ export default async function Layout({
   children: React.ReactNode;
 }) {
   const token = (await cookies()).get("revynora_session")?.value;
-  if (!token) redirect("/connexion");
-  let response: Response;
-  try {
-    response = await fetch(
-      (process.env.API_URL ?? "http://127.0.0.1:3001") + "/api/v1/users/me",
-      {
-        headers: { cookie: "revynora_session=" + token },
-        cache: "no-store",
-        signal: AbortSignal.timeout(5000),
-      },
-    );
-  } catch {
+  const state = await readAdminSession(token);
+  if (state === "signin") redirect("/connexion");
+  if (state === "unavailable")
     return (
       <main id="main" className="container section">
         <h1>Administration indisponible</h1>
-        <p>Réessayez lorsque l’API répond.</p>
+        <p>La session ne peut pas être vérifiée. Réessayez plus tard.</p>
+        <Link href="/">Réessayer</Link>
       </main>
     );
-  }
-  if (response.status === 401) redirect("/connexion");
-  if (!response.ok)
-    return (
-      <main id="main">
-        <h1>Administration indisponible</h1>
-      </main>
-    );
-  const user = await response.json();
-  if (user.role !== "ADMIN")
+  if (state === "forbidden")
     return (
       <main id="main" className="container section">
         <h1>Accès administrateur requis</h1>

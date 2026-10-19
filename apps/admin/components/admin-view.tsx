@@ -1,4 +1,15 @@
 "use client";
+import type {
+  AdminUser,
+  AdminMetrics,
+  AdminPage,
+  AdminEvents,
+  AdminOffer,
+} from "@revynora/types";
+import {
+  AccessConfirmation,
+  accessReasons,
+} from "@/modules/users/access-confirmation";
 import { LoadingState } from "@revynora/ui";
 import { useState } from "react";
 import Link from "next/link";
@@ -7,34 +18,8 @@ import { useResource } from "@/lib/use-resource";
 import { Brand } from "@revynora/ui/brand";
 import { Card, PageHeader, Alert, Input, FormField, Badge } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
-type Person = {
-  id: string;
-  name: string;
-  email: string;
-  role: string;
-  disabledAt: string | null;
-};
-type Metrics = {
-  users: number;
-  newUsers: number;
-  billingMode: string;
-  workerEnabled: boolean;
-  payments: {
-    provider: string;
-    status: string;
-    _sum: { amountCents: number | null };
-    _count: number;
-  }[];
-  ai: {
-    _count: number;
-    _sum: {
-      estimatedCostUsd: string | null;
-      inputTokens: number | null;
-      outputTokens: number | null;
-    };
-  };
-};
 export function AdminView() {
+  const [pending, setPending] = useState<AdminUser | null>(null);
   const [page, setPage] = useState(1),
     [search, setSearch] = useState(""),
     [from, setFrom] = useState(() =>
@@ -46,25 +31,12 @@ export function AdminView() {
     [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   const period = "?from=" + from + "&to=" + to + "&page=" + page;
-  const metrics = useResource<Metrics>("/admin/metrics" + period),
-    users = useResource<{ items: Person[]; total: number }>(
+  const metrics = useResource<AdminMetrics>("/admin/metrics" + period),
+    users = useResource<AdminPage<AdminUser>>(
       "/admin/users" + period + "&search=" + encodeURIComponent(search),
     ),
-    events = useResource<{
-      items: {
-        id: string;
-        eventType: string;
-        status: string;
-        amountCents: number | null;
-        createdAt: string;
-      }[];
-      audit: { id: string; action: string; createdAt: string }[];
-      total: number;
-    }>("/admin/events" + period),
-    offers =
-      useResource<{ code: string; priceCents: number; active: boolean }[]>(
-        "/admin/offers",
-      );
+    events = useResource<AdminEvents>("/admin/events" + period),
+    offers = useResource<AdminOffer[]>("/admin/offers");
   return (
     <div className="admin-shell">
       <aside className="admin-sidebar">
@@ -216,21 +188,9 @@ export function AdminView() {
                         <Button
                           variant="outline"
                           disabled={busy}
-                          onClick={async () => {
-                            setBusy(true);
-                            try {
-                              await api("/admin/users/" + u.id, {
-                                method: "PATCH",
-                                body: JSON.stringify({
-                                  disabled: !u.disabledAt,
-                                }),
-                              });
-                              users.reload();
-                            } catch (e) {
-                              setError(message(e));
-                            } finally {
-                              setBusy(false);
-                            }
+                          onClick={() => {
+                            setError("");
+                            setPending(u);
                           }}
                         >
                           {u.disabledAt ? "Réactiver" : "Suspendre"}
@@ -242,6 +202,32 @@ export function AdminView() {
               </tbody>
             </table>
           </div>
+          {pending && (
+            <AccessConfirmation
+              key={pending.id}
+              name={pending.name}
+              disabled={!pending.disabledAt}
+              busy={busy}
+              onCancel={() => setPending(null)}
+              onConfirm={async (command) => {
+                setBusy(true);
+                setError("");
+                try {
+                  await api("/admin/users/" + pending.id, {
+                    method: "PATCH",
+                    body: JSON.stringify(command),
+                  });
+                  setPending(null);
+                  users.reload();
+                  events.reload();
+                } catch (e) {
+                  setError(message(e));
+                } finally {
+                  setBusy(false);
+                }
+              }}
+            />
+          )}
           <div className="saas-actions">
             <Button
               variant="outline"
@@ -297,6 +283,14 @@ export function AdminView() {
           {events.data?.audit.map((e) => (
             <div className="saas-row" key={e.id}>
               <span>{e.action}</span>
+              <small>
+                Administrateur : {e.actorId ?? "historique"} · Cible :{" "}
+                {e.targetUserId ?? "non disponible"} ·{" "}
+                {e.reason
+                  ? accessReasons[e.reason]
+                  : "motif historique indisponible"}{" "}
+                · {e.result ?? "LEGACY"}
+              </small>
               <small>{new Date(e.createdAt).toLocaleString("fr-FR")}</small>
             </div>
           ))}

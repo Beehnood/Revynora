@@ -1,3 +1,4 @@
+export type * from "./admin";
 export type HealthResponse = { status: "ok"; version: string };
 export type ReadinessResponse = { status: "ready" | "unavailable" };
 export type DemoRole = "student" | "admin";

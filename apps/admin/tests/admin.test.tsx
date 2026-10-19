@@ -1,7 +1,7 @@
 import { it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AdminView } from "../components/admin-view";
-import { api } from "../lib/api";
+import { api, RequestError } from "../lib/api";
 const m = vi.hoisted(() => ({
   data: new Map<string, unknown>(),
   error: "",
@@ -27,6 +27,17 @@ beforeEach(() => {
   m.loading = false;
   vi.mocked(api).mockResolvedValue({});
 });
+async function confirmAccess(label: string) {
+  fireEvent.change(screen.getByLabelText("Motif obligatoire"), {
+    target: { value: "SECURITY_REVIEW" },
+  });
+  fireEvent.click(
+    screen.getByRole("checkbox", {
+      name: "Je confirme cette action sur ce compte",
+    }),
+  );
+  fireEvent.click(screen.getByRole("button", { name: label }));
+}
 it("admin : filtres, pagination, suspension et distinction des revenus simulés", async () => {
   m.data.set("/admin/metrics", {
     users: 42,
@@ -83,14 +94,22 @@ it("admin : filtres, pagination, suspension et distinction des revenus simulés"
   expect(screen.getByText("Page 2")).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Précédent" }));
   fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
+  await confirmAccess("Confirmer la suspension");
   await waitFor(() =>
     expect(api).toHaveBeenCalledWith(
       "/admin/users/u",
-      expect.objectContaining({ body: JSON.stringify({ disabled: true }) }),
+      expect.objectContaining({
+        body: JSON.stringify({
+          disabled: true,
+          confirmed: true,
+          reason: "SECURITY_REVIEW",
+        }),
+      }),
     ),
   );
   vi.mocked(api).mockRejectedValueOnce(new Error("Refus"));
   fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
+  await confirmAccess("Confirmer la suspension");
   await screen.findByRole("alert");
 });
 
@@ -138,10 +157,17 @@ it("réactive un compte suspendu et laisse les administrateurs protégés", asyn
   });
   render(<AdminView />);
   fireEvent.click(screen.getByRole("button", { name: "Réactiver" }));
+  await confirmAccess("Confirmer la réactivation");
   await waitFor(() =>
     expect(api).toHaveBeenCalledWith(
       "/admin/users/suspended",
-      expect.objectContaining({ body: JSON.stringify({ disabled: false }) }),
+      expect.objectContaining({
+        body: JSON.stringify({
+          disabled: false,
+          confirmed: true,
+          reason: "SECURITY_REVIEW",
+        }),
+      }),
     ),
   );
   expect(
@@ -152,4 +178,44 @@ it("expose une erreur de chargement sans afficher de métriques inventées", () 
   m.error = "API inaccessible";
   render(<AdminView />);
   expect(screen.getByRole("alert")).toHaveTextContent("API inaccessible");
+});
+
+it("signale un ancien contrat API refusé sans réessai automatique ni suppression de la confirmation", async () => {
+  m.data.set("/admin/users", {
+    items: [
+      {
+        id: "target",
+        name: "Alice",
+        email: "alice@example.test",
+        role: "STUDENT",
+        disabledAt: null,
+      },
+    ],
+    total: 1,
+  });
+  vi.mocked(api).mockRejectedValueOnce(
+    new RequestError("Contrat administratif incompatible.", "VALIDATION", 400),
+  );
+  render(<AdminView />);
+  fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
+  await confirmAccess("Confirmer la suspension");
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "Contrat administratif incompatible.",
+  );
+  expect(api).toHaveBeenCalledOnce();
+  expect(api).toHaveBeenCalledWith(
+    "/admin/users/target",
+    expect.objectContaining({
+      body: JSON.stringify({
+        disabled: true,
+        confirmed: true,
+        reason: "SECURITY_REVIEW",
+      }),
+    }),
+  );
+  expect(
+    screen.getByRole("checkbox", {
+      name: "Je confirme cette action sur ce compte",
+    }),
+  ).toBeChecked();
 });

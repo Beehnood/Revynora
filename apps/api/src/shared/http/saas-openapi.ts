@@ -86,7 +86,19 @@ export function completeSaasOpenApi(doc: OpenAPIObject) {
       enabled: bool,
       timeZone: { ...text, example: "Europe/Paris" },
     }),
-    "PATCH /api/v1/admin/users/{id}": object({ disabled: bool }),
+    "PATCH /api/v1/admin/users/{id}": object({
+      disabled: bool,
+      confirmed: { type: "boolean", enum: [true] },
+      reason: {
+        type: "string",
+        enum: [
+          "SECURITY_REVIEW",
+          "POLICY_REVIEW",
+          "USER_REQUEST",
+          "REVIEW_COMPLETED",
+        ],
+      },
+    }),
     "DELETE /api/v1/privacy/account": object({
       password: { ...text, minLength: 1, maxLength: 128 },
       confirmation: { type: "string", enum: ["SUPPRIMER"] },
