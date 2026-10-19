@@ -101,6 +101,25 @@ export class PrismaAdminRepository implements AdminRepository {
       pageSize: 20,
     };
   }
+  async user(id: string) {
+    const u = await this.db.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        disabledAt: true,
+        createdAt: true,
+      },
+    });
+    if (!u) throw missing();
+    return {
+      ...u,
+      createdAt: u.createdAt.toISOString(),
+      disabledAt: u.disabledAt?.toISOString() ?? null,
+    };
+  }
   async events(f: AdminFilter) {
     const where = { createdAt: { gte: f.from, lt: f.to } };
     const [items, total, audit] = await this.db.$transaction([

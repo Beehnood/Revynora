@@ -15,6 +15,7 @@ export type AdminFilter = {
 export interface AdminRepository {
   metrics(filter: AdminFilter): Promise<AdminMetrics>;
   users(filter: AdminFilter): Promise<AdminPage<AdminUser>>;
+  user(id: string): Promise<AdminUser>;
   events(filter: AdminFilter): Promise<AdminEvents>;
   offers(): Promise<AdminOffer[]>;
   disable(

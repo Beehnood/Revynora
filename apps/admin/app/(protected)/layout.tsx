@@ -1,3 +1,4 @@
+import { AdminShell } from "@/components/admin-shell";
 import Link from "next/link";
 import { readAdminSession } from "@/lib/admin-session";
 import { cookies } from "next/headers";
@@ -28,5 +29,5 @@ export default async function Layout({
         <a href="/connexion">Changer de compte</a>
       </main>
     );
-  return children;
+  return <AdminShell>{children}</AdminShell>;
 }

@@ -33,6 +33,9 @@ export class AdminController {
   @Get("users") users(@Req() r: AuthRequest, @Query() q: unknown) {
     return this.use.users(parse(filter, q), r.student.role);
   }
+  @Get("users/:id") user(@Req() r: AuthRequest, @Param("id") id: string) {
+    return this.use.user(parse(z.string().uuid(), id), r.student.role);
+  }
   @Get("events") events(@Req() r: AuthRequest, @Query() q: unknown) {
     return this.use.events(parse(filter, q), r.student.role);
   }

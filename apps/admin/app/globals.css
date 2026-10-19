@@ -1,3 +1,57 @@
 @import "@revynora/ui/styles.css";
 @source "../components";
 @source "../../../packages/ui/src";
+@source "../modules";
+.admin-menu-toggle {
+  display: none;
+}
+.admin-nav a[aria-current="page"] {
+  background: #ede9fe;
+  color: #4338ca;
+  font-weight: 700;
+  border-radius: 0.6rem;
+}
+.admin-future {
+  font-size: 0.85rem;
+  color: #475569;
+  margin: 1.5rem 0;
+}
+.admin-main {
+  min-width: 0;
+}
+.admin-main dd {
+  margin: 0 0 1rem;
+  overflow-wrap: anywhere;
+}
+.admin-main dt {
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .admin-shell {
+    display: block;
+  }
+  .admin-menu-toggle {
+    display: inline-flex;
+    margin: 1rem;
+  }
+  .admin-sidebar {
+    display: none;
+    position: static;
+    width: auto;
+  }
+  .admin-sidebar.is-open {
+    display: block;
+  }
+  .admin-main {
+    padding: 1rem;
+  }
+}
+@media (max-width: 767px) {
+  .admin-sidebar {
+    height: auto;
+  }
+  .admin-sidebar .admin-nav {
+    flex-direction: column;
+    margin-top: 1rem;
+  }
+}

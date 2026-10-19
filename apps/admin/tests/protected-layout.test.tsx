@@ -6,6 +6,7 @@ vi.mock("next/headers", () => ({
   cookies: async () => ({ get: () => ({ value: "a".repeat(43) }) }),
 }));
 vi.mock("next/navigation", () => ({
+  usePathname: () => "/",
   redirect: (path: string) => {
     throw new Error("REDIRECT:" + path);
   },

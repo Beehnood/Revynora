@@ -2,32 +2,34 @@
 import { useEffect, useCallback, useState } from "react";
 import { api, message } from "./api";
 export function useResource<T>(path: string) {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState("");
-  const [loading, setLoading] = useState(true);
   const [revision, setRevision] = useState(0);
+  const [result, setResult] = useState<{
+    path: string;
+    revision: number;
+    data: T | null;
+    error: string;
+  } | null>(null);
   useEffect(() => {
     let current = true;
     api<T>(path)
-      .then((v) => {
-        if (current) {
-          setData(v);
-          setError("");
-        }
+      .then((data) => {
+        if (current) setResult({ path, revision, data, error: "" });
       })
-      .catch((e) => {
-        if (current) setError(message(e));
-      })
-      .finally(() => {
-        if (current) setLoading(false);
+      .catch((error) => {
+        if (current)
+          setResult({ path, revision, data: null, error: message(error) });
       });
     return () => {
       current = false;
     };
   }, [path, revision]);
-  const reload = useCallback(() => {
-    setLoading(true);
-    setRevision((v) => v + 1);
-  }, []);
-  return { data, error, loading, reload };
+  const reload = useCallback(() => setRevision((v) => v + 1), []);
+  const active =
+    result?.path === path && result.revision === revision ? result : null;
+  return {
+    data: active?.data ?? null,
+    error: active?.error ?? "",
+    loading: active === null,
+    reload,
+  };
 }

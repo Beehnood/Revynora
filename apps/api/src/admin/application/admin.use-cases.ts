@@ -11,6 +11,10 @@ export class AdminUseCases {
     requireAdminPermission(role, "users", "read");
     return this.repo.users(f);
   }
+  user(id: string, role: AdminRole) {
+    requireAdminPermission(role, "users", "read");
+    return this.repo.user(id);
+  }
   events(f: AdminFilter, role: AdminRole) {
     requireAdminPermission(role, "events", "read");
     return this.repo.events(f);

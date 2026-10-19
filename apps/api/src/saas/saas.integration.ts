@@ -117,6 +117,50 @@ afterAll(async () => {
   await app?.close();
 });
 describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () => {
+  it("G2: la fiche est réservée aux administrateurs et ne divulgue que les champs autorisés", async () => {
+    const student = await register("g2-student");
+    const manager = await register("g2-admin");
+    await db.user.update({
+      where: { id: manager.id },
+      data: { role: "ADMIN" },
+    });
+    expect((await req("/admin/users/" + student.id)).status).toBe(401);
+    expect(
+      (
+        await req(
+          "/admin/users/" + student.id,
+          "GET",
+          undefined,
+          student.cookie,
+        )
+      ).status,
+    ).toBe(403);
+    const detail = await req(
+      "/admin/users/" + student.id,
+      "GET",
+      undefined,
+      manager.cookie,
+    );
+    expect(detail.status).toBe(200);
+    expect(Object.keys(detail.data).sort()).toEqual(
+      ["id", "name", "email", "role", "disabledAt", "createdAt"].sort(),
+    );
+    expect(detail.data.id).toBe(student.id);
+    expect(
+      (await req("/admin/users/invalid", "GET", undefined, manager.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await req(
+          "/admin/users/" + crypto.randomUUID(),
+          "GET",
+          undefined,
+          manager.cookie,
+        )
+      ).status,
+    ).toBe(404);
+  });
   it("inscription atomique avec historique FREE sans paiement", async () => {
     const history = (
       await req("/subscriptions/history", "GET", undefined, a.cookie)

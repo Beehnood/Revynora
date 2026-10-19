@@ -1,5 +1,6 @@
 import { it, expect, vi, beforeEach } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { UsersView } from "../modules/users/users-view";
 import { AdminView } from "../components/admin-view";
 import { api, RequestError } from "../lib/api";
 const m = vi.hoisted(() => ({
@@ -79,7 +80,12 @@ it("admin : filtres, pagination, suspension et distinction des revenus simulés"
     total: 1,
   });
   m.data.set("/admin/offers", [{ code: "FREE", priceCents: 0, active: true }]);
-  render(<AdminView />);
+  render(
+    <>
+      <AdminView />
+      <UsersView />
+    </>,
+  );
   expect(screen.getByText(/simulation locale/)).toBeVisible();
   fireEvent.change(screen.getByLabelText("Du"), {
     target: { value: "2026-10-01" },
@@ -110,7 +116,7 @@ it("admin : filtres, pagination, suspension et distinction des revenus simulés"
   vi.mocked(api).mockRejectedValueOnce(new Error("Refus"));
   fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
   await confirmAccess("Confirmer la suspension");
-  await screen.findByRole("alert");
+  expect((await screen.findAllByRole("alert")).length).toBeGreaterThan(0);
 });
 
 it("états vides et chargement restent explicites", () => {
@@ -128,7 +134,12 @@ it("états vides et chargement restent explicites", () => {
   m.data.set("/admin/offers", [
     { code: "PLUS", priceCents: 250, active: false },
   ]);
-  render(<AdminView />);
+  render(
+    <>
+      <AdminView />
+      <UsersView />
+    </>,
+  );
   expect(screen.getByText("Aucun paiement.")).toBeVisible();
   expect(
     screen.getByText("Aucune action journalisée sur cette période."),
@@ -155,7 +166,12 @@ it("réactive un compte suspendu et laisse les administrateurs protégés", asyn
     ],
     total: 2,
   });
-  render(<AdminView />);
+  render(
+    <>
+      <AdminView />
+      <UsersView />
+    </>,
+  );
   fireEvent.click(screen.getByRole("button", { name: "Réactiver" }));
   await confirmAccess("Confirmer la réactivation");
   await waitFor(() =>
@@ -176,8 +192,13 @@ it("réactive un compte suspendu et laisse les administrateurs protégés", asyn
 });
 it("expose une erreur de chargement sans afficher de métriques inventées", () => {
   m.error = "API inaccessible";
-  render(<AdminView />);
-  expect(screen.getByRole("alert")).toHaveTextContent("API inaccessible");
+  render(
+    <>
+      <AdminView />
+      <UsersView />
+    </>,
+  );
+  expect(screen.getAllByRole("alert")[0]).toHaveTextContent("API inaccessible");
 });
 
 it("signale un ancien contrat API refusé sans réessai automatique ni suppression de la confirmation", async () => {
@@ -196,7 +217,12 @@ it("signale un ancien contrat API refusé sans réessai automatique ni suppressi
   vi.mocked(api).mockRejectedValueOnce(
     new RequestError("Contrat administratif incompatible.", "VALIDATION", 400),
   );
-  render(<AdminView />);
+  render(
+    <>
+      <AdminView />
+      <UsersView />
+    </>,
+  );
   fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
   await confirmAccess("Confirmer la suspension");
   expect(await screen.findByRole("alert")).toHaveTextContent(
