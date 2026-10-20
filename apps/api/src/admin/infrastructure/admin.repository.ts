@@ -9,7 +9,15 @@ import { readStatistics } from "./statistics.repository";
 import type { StatisticsPeriod } from "../domain/statistics";
 import { readCatalog, readCatalogCourse } from "./catalog.repository";
 import type { CatalogQuery } from "../domain/catalog";
+import { readPayments, readSubscriptions } from "./finance.repository";
+import type { PaymentQuery, SubscriptionQuery } from "../domain/finance";
 export class PrismaAdminRepository implements AdminRepository {
+  payments(query: PaymentQuery) {
+    return readPayments(this.db, query);
+  }
+  subscriptions(query: SubscriptionQuery) {
+    return readSubscriptions(this.db, query);
+  }
   private readonly logger = new Logger("AdminAudit");
   constructor(private readonly db: PrismaClient) {}
   supervision(period: StatisticsPeriod) {

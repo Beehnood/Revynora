@@ -20,6 +20,7 @@ import { AdminGuard } from "../../auth/session.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { AdminUseCases } from "../application/admin.use-cases";
+import { paymentQuery, subscriptionQuery } from "../domain/finance";
 const filter = z
   .object({
     from: z.coerce.date().default(() => new Date(Date.now() - 30 * 86400000)),
@@ -32,6 +33,21 @@ const filter = z
 @UseGuards(AdminGuard)
 export class AdminController {
   constructor(@Inject(AdminUseCases) private readonly use: AdminUseCases) {}
+  @Get("payments")
+  @ApiOperation({
+    summary:
+      "Paiements enregistrés, sans preuve d’encaissement réel ni données privées",
+  })
+  payments(@Req() r: AuthRequest, @Query() q: unknown) {
+    return this.use.payments(parse(paymentQuery, q), r.student.role);
+  }
+  @Get("subscriptions")
+  @ApiOperation({
+    summary: "Périodes enregistrées uniquement ; aucune mutation financière",
+  })
+  subscriptions(@Req() r: AuthRequest, @Query() q: unknown) {
+    return this.use.subscriptions(parse(subscriptionQuery, q), r.student.role);
+  }
   @Get("supervision")
   @ApiOperation({
     summary:

@@ -16,7 +16,13 @@ export type AdminFilter = {
   page: number;
   search: string;
 };
+import type { AdminPayment, AdminSubscriptionPeriod } from "@revynora/types";
+import type { PaymentQuery, SubscriptionQuery } from "./finance";
 export interface AdminRepository {
+  payments(query: PaymentQuery): Promise<AdminPage<AdminPayment>>;
+  subscriptions(
+    query: SubscriptionQuery,
+  ): Promise<AdminPage<AdminSubscriptionPeriod>>;
   supervision(period: { from: Date; to: Date }): Promise<AdminSupervision>;
   catalogCourses(query: {
     page: number;

@@ -1,7 +1,16 @@
 import type { AdminRole, AdminAccessChange } from "@revynora/types";
 import { requireAdminPermission } from "../domain/permissions";
 import type { AdminFilter, AdminRepository } from "../domain/admin";
+import type { PaymentQuery, SubscriptionQuery } from "../domain/finance";
 export class AdminUseCases {
+  payments(query: PaymentQuery, role: AdminRole) {
+    requireAdminPermission(role, "payments", "read");
+    return this.repo.payments(query);
+  }
+  subscriptions(query: SubscriptionQuery, role: AdminRole) {
+    requireAdminPermission(role, "subscriptions", "read");
+    return this.repo.subscriptions(query);
+  }
   constructor(private readonly repo: AdminRepository) {}
   supervision(period: { from: Date; to: Date }, role: AdminRole) {
     requireAdminPermission(role, "supervision", "read");

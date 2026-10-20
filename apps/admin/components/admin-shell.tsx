@@ -11,6 +11,8 @@ const links = [
   { href: "/", label: "Vue générale" },
   { href: "/utilisateurs", label: "Utilisateurs" },
   { href: "/cours", label: "Cours" },
+  { href: "/abonnements", label: "Abonnements" },
+  { href: "/paiements", label: "Paiements" },
 ];
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();

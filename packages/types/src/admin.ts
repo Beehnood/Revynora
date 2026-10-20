@@ -119,3 +119,24 @@ export type AdminSupervision = {
     count: number;
   }[];
 };
+
+export type AdminPayment = {
+  id: string;
+  provider: "mock" | "stripe" | "internal" | "other";
+  amountCents: number;
+  currency: string;
+  status: "PENDING" | "PAID" | "FAILED" | "REFUNDED";
+  verification: "SIMULATION" | "UNVERIFIED";
+  createdAt: string;
+};
+export type AdminSubscriptionPeriod = {
+  id: string;
+  plan: "FREE" | "PLUS" | "PRO";
+  provider: AdminPayment["provider"];
+  status: "ACTIVE" | "PAST_DUE" | "CANCELLED" | "INCOMPLETE";
+  priceCents: number;
+  currency: string;
+  startsAt: string;
+  endsAt: string;
+  cancelAtPeriodEnd: boolean;
+};

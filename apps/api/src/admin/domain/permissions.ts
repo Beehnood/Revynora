@@ -14,7 +14,8 @@ export const adminPermissions = {
   ai: [],
   leitner: [],
   planning: [],
-  subscriptions: [],
+  subscriptions: ["read"],
+  payments: ["read"],
   settings: [],
 } as const;
 export type AdminResource = keyof typeof adminPermissions;
