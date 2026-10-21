@@ -29,5 +29,13 @@ export default async function Layout({
         <a href="/connexion">Changer de compte</a>
       </main>
     );
-  return <AdminShell>{children}</AdminShell>;
+  const webOrigin =
+    process.env.WEB_ORIGIN ?? process.env.NEXT_PUBLIC_WEB_ORIGIN;
+  const learningHref =
+    webOrigin &&
+    /^https?:\/\//.test(webOrigin) &&
+    new URL(webOrigin).origin === webOrigin
+      ? webOrigin + "/app"
+      : undefined;
+  return <AdminShell learningHref={learningHref}>{children}</AdminShell>;
 }

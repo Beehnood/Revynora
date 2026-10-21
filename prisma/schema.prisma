@@ -61,6 +61,9 @@ model User {
   availability StudyAvailability[]
   emails EmailMessage[]
   auditActions AuditLog[] @relation("AuditActor")
+  grants InternalLearningGrant[] @relation("LearningBeneficiary")
+  issuedGrants InternalLearningGrant[] @relation("LearningIssuer")
+  revokedGrants InternalLearningGrant[] @relation("LearningRevoker")
 }
 model Session {
   id String @id @default(uuid())
@@ -391,4 +394,24 @@ model StudyAvailability {
  startsAt DateTime
  endsAt DateTime
  @@index([userId, startsAt])
+}
+
+// Internal access is independent of commercial subscriptions and payments.
+model InternalLearningGrant {
+  id String @id @default(uuid())
+  userId String
+  user User @relation("LearningBeneficiary", fields:[userId], references:[id], onDelete:Restrict)
+  level Plan @default(PRO)
+  startsAt DateTime
+  expiresAt DateTime?
+  provenance String
+  justification String
+  createdAt DateTime @default(now())
+  issuedById String
+  issuedBy User @relation("LearningIssuer", fields:[issuedById], references:[id], onDelete:Restrict)
+  revokedAt DateTime?
+  revokedById String?
+  revokedBy User? @relation("LearningRevoker", fields:[revokedById], references:[id], onDelete:Restrict)
+  revocationReason String?
+  @@index([userId, revokedAt, startsAt])
 }

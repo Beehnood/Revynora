@@ -1,4 +1,4 @@
-import type { GetEntitlements } from "../../billing/application/billing.use-cases";
+import type { GetLearningAccess } from "../../learning-access/application/learning-access";
 import type {
   PlanRepository,
   GenerateInput,
@@ -7,7 +7,7 @@ import type {
 export class PlanningUseCases {
   constructor(
     private readonly repo: PlanRepository,
-    private readonly access: GetEntitlements,
+    private readonly access: GetLearningAccess,
   ) {}
   async rename(user: string, id: string, title: string) {
     await this.access.require(user, "PRO");

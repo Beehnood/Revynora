@@ -3,12 +3,12 @@ import {
   aiPlanningRequestSchema,
   aiPlanningConfirmSchema,
 } from "@revynora/validation";
-import { StudentGuard } from "../../auth/student.guard";
+import { LearningAccessGuard } from "../../auth/learning-access.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { IntelligentPlanning } from "../application/intelligent-planning.use-cases";
 @Controller("study-plans/ai")
-@UseGuards(StudentGuard)
+@UseGuards(LearningAccessGuard)
 export class IntelligentPlanningController {
   constructor(
     @Inject(IntelligentPlanning) private readonly use: IntelligentPlanning,

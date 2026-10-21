@@ -17,6 +17,7 @@ export const adminPermissions = {
   subscriptions: ["read"],
   payments: ["read"],
   settings: [],
+  internalLearningGrants: ["read", "create", "revoke"],
 } as const;
 export type AdminResource = keyof typeof adminPermissions;
 export function requireAdminPermission(

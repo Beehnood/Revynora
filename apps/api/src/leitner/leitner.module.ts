@@ -2,7 +2,7 @@ import { loadEnvironment } from "../shared/config/environment";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseService } from "../database/database.service";
-import { GetEntitlements } from "../billing/application/billing.use-cases";
+import { GetLearningAccess } from "../learning-access/application/learning-access";
 import { LeitnerUseCases } from "./application/leitner.use-cases";
 import { PrismaCardRepository } from "./infrastructure/prisma-card.repository";
 import { LeitnerController } from "./presentation/leitner.controller";
@@ -12,8 +12,8 @@ import { LeitnerController } from "./presentation/leitner.controller";
   providers: [
     {
       provide: LeitnerUseCases,
-      inject: [DatabaseService, GetEntitlements],
-      useFactory: (db: DatabaseService, access: GetEntitlements) =>
+      inject: [DatabaseService, GetLearningAccess],
+      useFactory: (db: DatabaseService, access: GetLearningAccess) =>
         new LeitnerUseCases(
           new PrismaCardRepository(
             db.client,

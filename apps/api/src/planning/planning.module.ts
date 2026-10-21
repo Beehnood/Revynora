@@ -11,7 +11,7 @@ import { loadEnvironment } from "../shared/config/environment";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
 import { DatabaseService } from "../database/database.service";
-import { GetEntitlements } from "../billing/application/billing.use-cases";
+import { GetLearningAccess } from "../learning-access/application/learning-access";
 import { PlanningUseCases } from "./application/planning.use-cases";
 import { PrismaPlanRepository } from "./infrastructure/prisma-plan.repository";
 import { PlanningController } from "./presentation/planning.controller";
@@ -21,8 +21,8 @@ import { PlanningController } from "./presentation/planning.controller";
   providers: [
     {
       provide: IntelligentPlanning,
-      inject: [DatabaseService, GetEntitlements],
-      useFactory: (db: DatabaseService, access: GetEntitlements) =>
+      inject: [DatabaseService, GetLearningAccess],
+      useFactory: (db: DatabaseService, access: GetLearningAccess) =>
         new IntelligentPlanning(
           access,
           new PrismaPlanningContext(db.client),
@@ -36,8 +36,8 @@ import { PlanningController } from "./presentation/planning.controller";
     },
     {
       provide: PlanningUseCases,
-      inject: [DatabaseService, GetEntitlements],
-      useFactory: (db: DatabaseService, access: GetEntitlements) =>
+      inject: [DatabaseService, GetLearningAccess],
+      useFactory: (db: DatabaseService, access: GetLearningAccess) =>
         new PlanningUseCases(new PrismaPlanRepository(db.client), access),
     },
   ],

@@ -1,4 +1,6 @@
 "use client";
+import type { UserProfile } from "@revynora/types";
+import { InternalLearningAccess } from "./internal-learning-access";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -22,7 +24,14 @@ type Payment = {
   createdAt: string;
   receiptUrl?: string | null;
 };
-export function BillingView() {
+export function BillingView({ user }: { user?: UserProfile } = {}) {
+  return user?.role === "ADMIN" ? (
+    <InternalLearningAccess />
+  ) : (
+    <CommercialBillingView />
+  );
+}
+function CommercialBillingView() {
   const [paymentPage, setPaymentPage] = useState(1);
   const current = useResource<Current>("/subscriptions/me"),
     plans = useResource<Offer[]>("/subscriptions/plans"),

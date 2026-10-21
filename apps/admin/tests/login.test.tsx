@@ -43,3 +43,8 @@ it("annonce une panne et permet une nouvelle tentative", async () => {
   await screen.findByText("Indisponible");
   expect(screen.getByRole("button", { name: "Me connecter" })).toBeEnabled();
 });
+
+it("utilise POST pour le formulaire HTML de repli", () => {
+  const { container } = render(<LoginForm />);
+  expect(container.querySelector("form")).toHaveAttribute("method", "post");
+});

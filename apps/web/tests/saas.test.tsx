@@ -437,3 +437,37 @@ describe("Écrans SaaS", () => {
     );
   });
 });
+
+it("présente les droits internes ADMIN sans achat Pro ni commandes de facturation", () => {
+  m.data.set("/learning/access", {
+    allowed: true,
+    commercialPlan: "FREE",
+    effectivePlan: "PRO",
+    source: "INTERNAL",
+    leitner: true,
+    planning: true,
+    internal: { startsAt: "2026-10-21T00:00:00Z", expiresAt: null },
+  });
+  render(
+    <BillingView
+      user={{
+        id: "internal-owner",
+        role: "ADMIN",
+        plan: "FREE",
+        name: "Compte interne",
+        email: "owner@example.test",
+        createdAt: "2026-10-21",
+      }}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Accès interne · équivalent Pro" }),
+  ).toBeVisible();
+  expect(screen.getByText(/ne constitue pas un achat/)).toHaveTextContent(
+    "Offre commerciale : FREE",
+  );
+  expect(
+    screen.queryByRole("button", { name: /payer|acheter|portail|changer/i }),
+  ).not.toBeInTheDocument();
+  expect(api).not.toHaveBeenCalled();
+});

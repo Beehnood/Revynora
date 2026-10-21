@@ -1,12 +1,16 @@
 "use client";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { api, message } from "@/lib/api";
 import { Brand } from "@revynora/ui/brand";
 import { Card, Alert, Input, FormField } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
+const subscribe = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 export function LoginForm() {
   const router = useRouter();
+  const ready = useSyncExternalStore(subscribe, clientReady, serverReady);
   const [error, setError] = useState(""),
     [busy, setBusy] = useState(false);
   return (
@@ -16,6 +20,7 @@ export function LoginForm() {
         <h1>Connexion administrateur</h1>
         <p>Utilisez votre compte administrateur existant.</p>
         <form
+          method="post"
           className="saas-form"
           onSubmit={async (e) => {
             e.preventDefault();
@@ -60,7 +65,7 @@ export function LoginForm() {
             />
           </FormField>
           {error && <Alert role="alert">{error}</Alert>}
-          <Button disabled={busy}>
+          <Button disabled={busy || !ready}>
             {busy ? "Connexion…" : "Me connecter"}
           </Button>
         </form>

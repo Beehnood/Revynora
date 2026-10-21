@@ -7,7 +7,7 @@ import {
 import { MockPlanningGenerator } from "./infrastructure/planning.generator";
 import { localInstant } from "./infrastructure/prisma-plan.repository";
 import { IntelligentPlanning } from "./application/intelligent-planning.use-cases";
-import type { GetEntitlements } from "../billing/application/billing.use-cases";
+import type { GetLearningAccess } from "../learning-access/application/learning-access";
 import type { PlanRepository } from "./domain/planning";
 import { summarizeProgress } from "../progress/domain/progress";
 const courseId = "12345678-1234-4234-8234-123456789012";
@@ -98,7 +98,7 @@ describe("Planning et statistiques Phase 3", () => {
       generate = vi.fn().mockResolvedValue({ bad: true }),
       persist = vi.fn();
     const use = new IntelligentPlanning(
-      { require: requireAccess } as unknown as GetEntitlements,
+      { require: requireAccess } as unknown as GetLearningAccess,
       { read },
       { generate, name: "mock" },
       { generate: persist } as unknown as PlanRepository,

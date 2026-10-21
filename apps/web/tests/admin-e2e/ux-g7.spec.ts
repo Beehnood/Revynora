@@ -17,13 +17,17 @@ for (const width of [320, 375, 768, 1280, 1440]) {
     await expect(page).toHaveURL(/\/connexion$/);
     const login = await page
       .context()
-      .request.post("http://127.0.0.1:3001/api/v1/auth/login", {
-        headers: {
-          Origin: "http://127.0.0.1:3002",
-          "X-Revynora-Client": "web",
+      .request.post(
+        (process.env.TEST_API_ORIGIN ?? "http://127.0.0.1:3001") +
+          "/api/v1/auth/login",
+        {
+          headers: {
+            Origin: process.env.ADMIN_ORIGIN ?? "http://127.0.0.1:3002",
+            "X-Revynora-Client": "web",
+          },
+          data: { email, password },
         },
-        data: { email, password },
-      });
+      );
     expect(login.status()).toBe(201);
     // Actual local data, captured before any browser-only responses are installed.
     for (const path of paths) {

@@ -14,7 +14,13 @@ const links = [
   { href: "/abonnements", label: "Abonnements" },
   { href: "/paiements", label: "Paiements" },
 ];
-export function AdminShell({ children }: { children: React.ReactNode }) {
+export function AdminShell({
+  children,
+  learningHref,
+}: {
+  children: React.ReactNode;
+  learningHref?: string;
+}) {
   const path = usePathname();
   const [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false),
@@ -65,6 +71,11 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
+        {learningHref && (
+          <a className="button button-outline" href={learningHref}>
+            Mon espace pédagogique
+          </a>
+        )}
         <Button
           variant="outline"
           disabled={busy}

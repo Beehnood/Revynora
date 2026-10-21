@@ -1,5 +1,5 @@
 import { planningAiOutputSchema } from "@revynora/validation";
-import type { GetEntitlements } from "../../billing/application/billing.use-cases";
+import type { GetLearningAccess } from "../../learning-access/application/learning-access";
 import type { PlanRepository } from "../domain/planning";
 import type {
   PlanningContextReader,
@@ -9,7 +9,7 @@ import { validateProposalTasks } from "../domain/intelligent-planning";
 import { DomainError } from "../../shared/domain/errors";
 export class IntelligentPlanning {
   constructor(
-    private readonly access: GetEntitlements,
+    private readonly access: GetLearningAccess,
     private readonly reader: PlanningContextReader,
     private readonly generator: PlanningGenerator,
     private readonly plans: PlanRepository,

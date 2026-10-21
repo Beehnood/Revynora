@@ -3,6 +3,7 @@ export type HealthResponse = { status: "ok"; version: string };
 export type ReadinessResponse = { status: "ready" | "unavailable" };
 export type DemoRole = "student" | "admin";
 export type UserProfile = {
+  learningAccess?: LearningAccess;
   id: string;
   name: string;
   email: string;
@@ -152,4 +153,14 @@ export type MobileSession = {
   user: UserProfile;
   token: string;
   expiresAt: string;
+};
+
+export type LearningAccess = {
+  allowed: boolean;
+  commercialPlan: "FREE" | "PLUS" | "PRO";
+  effectivePlan: "FREE" | "PLUS" | "PRO";
+  source: "INTERNAL" | "COMMERCIAL" | "NONE";
+  leitner: boolean;
+  planning: boolean;
+  internal: { startsAt: string; expiresAt: string | null } | null;
 };

@@ -8,12 +8,12 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
-import { StudentGuard } from "../../auth/student.guard";
+import { LearningAccessGuard } from "../../auth/learning-access.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { NotificationUseCases } from "../application/notifications.use-cases";
 @Controller("notifications")
-@UseGuards(StudentGuard)
+@UseGuards(LearningAccessGuard)
 export class NotificationsController {
   constructor(
     @Inject(NotificationUseCases) private readonly use: NotificationUseCases,

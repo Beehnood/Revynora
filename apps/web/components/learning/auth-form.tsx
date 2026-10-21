@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { registerSchema, loginSchema } from "@revynora/validation";
 import { Eye, EyeOff, ArrowRight, CheckCircle2, BookOpen } from "lucide-react";
@@ -7,7 +7,11 @@ import { Brand } from "../brand";
 import { Alert, FormField, Input } from "../ui";
 import { Button } from "../ui/button";
 import { api, message, RequestError, safeReturn } from "@/lib/api";
+const subscribe = () => () => {};
+const clientReady = () => true;
+const serverReady = () => false;
 export function AuthForm({ register = false }: { register?: boolean }) {
+  const ready = useSyncExternalStore(subscribe, clientReady, serverReady);
   const [visible, setVisible] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -48,6 +52,7 @@ export function AuthForm({ register = false }: { register?: boolean }) {
             : "Reprends ton parcours là où tu l’as laissé."}
         </p>
         <form
+          method="post"
           noValidate
           className="form-grid"
           onSubmit={async (e) => {
@@ -167,7 +172,7 @@ export function AuthForm({ register = false }: { register?: boolean }) {
           {success && (
             <Alert>Connexion réussie. Ouverture de ton espace…</Alert>
           )}
-          <Button disabled={busy} aria-busy={busy}>
+          <Button disabled={busy || !ready} aria-busy={busy}>
             {busy
               ? "Ouverture de ton espace…"
               : register

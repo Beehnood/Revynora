@@ -1,9 +1,9 @@
 import type { CardRepository, CardInput } from "../domain/leitner";
-import type { GetEntitlements } from "../../billing/application/billing.use-cases";
+import type { GetLearningAccess } from "../../learning-access/application/learning-access";
 export class LeitnerUseCases {
   constructor(
     private readonly repo: CardRepository,
-    private readonly access: GetEntitlements,
+    private readonly access: GetLearningAccess,
   ) {}
   async list(user: string, due: boolean, page = 1, pageSize = 100) {
     await this.access.require(user, "PLUS");

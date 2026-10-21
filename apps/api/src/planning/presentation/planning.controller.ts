@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
-import { StudentGuard } from "../../auth/student.guard";
+import { LearningAccessGuard } from "../../auth/learning-access.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { PlanningUseCases } from "../application/planning.use-cases";
@@ -23,7 +23,7 @@ import {
 } from "@revynora/validation";
 import { localInstant } from "../infrastructure/prisma-plan.repository";
 @Controller()
-@UseGuards(StudentGuard)
+@UseGuards(LearningAccessGuard)
 export class PlanningController {
   constructor(
     @Inject(PlanningUseCases) private readonly use: PlanningUseCases,

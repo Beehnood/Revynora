@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
-import { StudentGuard } from "../../auth/student.guard";
+import { LearningAccessGuard } from "../../auth/learning-access.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { LeitnerUseCases } from "../application/leitner.use-cases";
@@ -28,7 +28,7 @@ const card = z
   })
   .strict();
 @Controller("leitner")
-@UseGuards(StudentGuard)
+@UseGuards(LearningAccessGuard)
 export class LeitnerController {
   constructor(@Inject(LeitnerUseCases) private readonly use: LeitnerUseCases) {}
   @Get("cards") list(@Req() r: AuthRequest, @Query() q: unknown) {
