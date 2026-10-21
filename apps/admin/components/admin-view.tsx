@@ -1,4 +1,5 @@
 "use client";
+import { money, dateLabel, label } from "@/lib/presentation";
 import type { AdminMetrics, AdminEvents, AdminOffer } from "@revynora/types";
 import { accessReasons } from "@/modules/users/access-confirmation";
 import { LoadingState } from "@revynora/ui";
@@ -28,12 +29,26 @@ export function AdminView() {
     <>
       <PageHeader
         title="Administration"
-        description="Une vue de la plateforme, des abonnements de test et de l’activité pédagogique."
+        description="Activité, inscriptions et suivi de la plateforme."
       />
+      <p className="admin-period-label">
+        Période appliquée : {dateLabel(applied.from, false)} →{" "}
+        {dateLabel(applied.to, false)} (fin exclue, UTC)
+      </p>
       {metrics.loading && <LoadingState />}
       {(metrics.error || events.error || offers.error) && (
         <Alert role="alert">
           {metrics.error || events.error || offers.error}
+          <Button
+            variant="outline"
+            onClick={() => {
+              metrics.reload();
+              events.reload();
+              offers.reload();
+            }}
+          >
+            Réessayer la synthèse
+          </Button>
         </Alert>
       )}
       <Card>
@@ -81,15 +96,18 @@ export function AdminView() {
       </Card>
       {metrics.data && (
         <>
-          <div className="saas-grid">
+          <div className="saas-grid admin-kpis">
             <Card>
               <Badge>Utilisateurs</Badge>
-              <h2>{metrics.data.users}</h2>
-              <p>{metrics.data.newUsers} inscriptions sur la période</p>
+              <p className="admin-kpi-value">{metrics.data.users}</p>
+              <p>
+                {metrics.data.newUsers} inscription
+                {metrics.data.newUsers > 1 ? "s" : ""} sur la période
+              </p>
             </Card>
             <Card>
               <Badge>Requêtes IA enregistrées</Badge>
-              <h2>{metrics.data.ai._count}</h2>
+              <p className="admin-kpi-value">{metrics.data.ai._count}</p>
               <p>
                 Coût estimé :{" "}
                 {metrics.data.ai._sum.estimatedCostUsd ?? "non disponible"} USD
@@ -106,7 +124,8 @@ export function AdminView() {
                     : "mode non reconnu"}
               </p>
               <p>
-                Worker : {metrics.data.workerEnabled ? "activé" : "désactivé"}
+                Rappels automatiques :{" "}
+                {metrics.data.workerEnabled ? "activé" : "désactivé"}
               </p>
             </Card>
           </div>
@@ -114,76 +133,84 @@ export function AdminView() {
       )}
       <StatisticsPanel from={applied.from} to={applied.to} />
       <SupervisionPanel from={applied.from} to={applied.to} />
-      <Card>
-        <h2>Gestion des utilisateurs</h2>
-        <Link href="/utilisateurs">Consulter les utilisateurs</Link>
-      </Card>
-      <Card>
-        <h2>Catalogue des offres</h2>
-        {offers.data?.map((o) => (
-          <div className="saas-row" key={o.code}>
-            <strong>{o.code}</strong>
-            <span>
-              {(o.priceCents / 100).toFixed(2)} € / mois ·{" "}
-              {o.active ? "Disponible" : "Inactive"}
-            </span>
-          </div>
-        ))}
-        <p>
-          Les prix de cette phase sont fixes. Toute nouvelle grille nécessite
-          une nouvelle version de catalogue.
-        </p>
-      </Card>
-      <Card id="admin-events">
-        {events.data?.items.length === 0 && (
-          <p>Aucun événement financier sur cette période.</p>
-        )}
-        <h2>Événements financiers · {events.data?.total ?? 0}</h2>
-        {events.data?.items.map((e) => (
-          <div className="saas-row" key={e.id}>
-            <span>{e.eventType}</span>
-            <Badge>{e.status}</Badge>
-            <small>{new Date(e.createdAt).toLocaleString("fr-FR")}</small>
-          </div>
-        ))}
-      </Card>
-      <div className="saas-actions">
-        <Button
-          variant="outline"
-          disabled={page === 1}
-          onClick={() => setPage(page - 1)}
-        >
-          Événements précédents
-        </Button>
-        <span>Page événements {page}</span>
-        <Button
-          variant="outline"
-          disabled={page * 20 >= (events.data?.total ?? 0)}
-          onClick={() => setPage(page + 1)}
-        >
-          Événements suivants
-        </Button>
+      <div className="admin-shortcuts">
+        <Link href="/utilisateurs">Gérer les utilisateurs →</Link>
+        <Link href="/abonnements">Consulter les abonnements →</Link>
+        <Link href="/paiements">Consulter les paiements →</Link>
       </div>
-      <Card id="admin-audit">
-        {events.data?.audit.length === 0 && (
-          <p>Aucune action journalisée sur cette période.</p>
-        )}
-        <h2>Journal d’audit</h2>
-        {events.data?.audit.map((e) => (
-          <div className="saas-row" key={e.id}>
-            <span>{e.action}</span>
-            <small>
-              Administrateur : {e.actorId ?? "historique"} · Cible :{" "}
-              {e.targetUserId ?? "non disponible"} ·{" "}
-              {e.reason
-                ? accessReasons[e.reason]
-                : "motif historique indisponible"}{" "}
-              · {e.result ?? "LEGACY"}
-            </small>
-            <small>{new Date(e.createdAt).toLocaleString("fr-FR")}</small>
-          </div>
-        ))}
-      </Card>
+      <details className="admin-secondary">
+        <summary>Offres, événements financiers et journal d’audit</summary>
+        <Card>
+          <h2>Gestion des utilisateurs</h2>
+          <Link href="/utilisateurs">Consulter les utilisateurs</Link>
+        </Card>
+        <Card>
+          <h2>Catalogue des offres</h2>
+          {offers.data?.map((o) => (
+            <div className="saas-row" key={o.code}>
+              <strong>{o.code}</strong>
+              <span>
+                {money(o.priceCents, o.currency)} · prix catalogue ·{" "}
+                {o.active ? "Disponible" : "Inactive"}
+              </span>
+            </div>
+          ))}
+          <p>
+            Les prix de cette phase sont fixes. Toute nouvelle grille nécessite
+            une nouvelle version de catalogue.
+          </p>
+        </Card>
+        <Card id="admin-events">
+          {events.data?.items.length === 0 && (
+            <p>Aucun événement financier sur cette période.</p>
+          )}
+          <h2>Événements financiers · {events.data?.total ?? 0}</h2>
+          {events.data?.items.map((e) => (
+            <div className="saas-row" key={e.id}>
+              <span>{label(e.eventType)}</span>
+              <Badge>{label(e.status)}</Badge>
+              <small>{dateLabel(e.createdAt)}</small>
+            </div>
+          ))}
+        </Card>
+        <div className="saas-actions">
+          <Button
+            variant="outline"
+            disabled={page === 1}
+            onClick={() => setPage(page - 1)}
+          >
+            Événements précédents
+          </Button>
+          <span>Page événements {page}</span>
+          <Button
+            variant="outline"
+            disabled={page * 20 >= (events.data?.total ?? 0)}
+            onClick={() => setPage(page + 1)}
+          >
+            Événements suivants
+          </Button>
+        </div>
+        <Card id="admin-audit">
+          {events.data?.audit.length === 0 && (
+            <p>Aucune action journalisée sur cette période.</p>
+          )}
+          <h2>Journal d’audit</h2>
+          {events.data?.audit.map((e) => (
+            <div className="saas-row" key={e.id}>
+              <span>{label(e.action)}</span>
+              <small>
+                Administrateur : {e.actorId ?? "historique"} · Cible :{" "}
+                {e.targetUserId ?? "non disponible"} ·{" "}
+                {e.reason
+                  ? accessReasons[e.reason]
+                  : "motif historique indisponible"}{" "}
+                · {label(e.result ?? "LEGACY")}
+              </small>
+              <small>{dateLabel(e.createdAt)}</small>
+            </div>
+          ))}
+        </Card>
+      </details>
     </>
   );
 }

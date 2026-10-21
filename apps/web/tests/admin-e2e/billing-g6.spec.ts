@@ -87,7 +87,7 @@ for (const width of [320, 768, 1280])
       .getByRole("combobox", { name: "Statut enregistré", exact: true })
       .selectOption("INCOMPLETE");
     await expect(
-      page.getByText("Aucun résultat sur cette page."),
+      page.getByText("Aucun résultat pour ces filtres."),
     ).toBeVisible();
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
   });

@@ -70,7 +70,7 @@ it("distingue simulation, environnement inconnu, estimations partielles et monta
   expect(screen.getByText("0.00012345")).toBeVisible();
   expect(screen.getByText("1 / 2")).toBeVisible();
   expect(screen.getByText("Non disponible")).toBeVisible();
-  expect(screen.getByText("2,50 EUR")).toBeVisible();
+  expect(screen.getByText("2,50 €")).toBeVisible();
   expect(
     screen.getByText("700 unités stockées (échelle non vérifiée) USD"),
   ).toBeVisible();

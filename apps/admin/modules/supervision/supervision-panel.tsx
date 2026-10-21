@@ -30,16 +30,18 @@ export function SupervisionPanel({ from, to }: { from: string; to: string }) {
     <section aria-labelledby="supervision-title">
       <h2 id="supervision-title">Supervision Leitner et planning</h2>
       <p>
-        Du {from} au {to} exclu, journées UTC. Comptages globaux uniquement. La
-        consommation IA et sa couverture d’estimation figurent dans la section «
-        Consommation IA » ci-dessus.
+        Activité enregistrée sur la période sélectionnée · comptages globaux
+        uniquement.
       </p>
-      <p>
-        Révisions, plans et éléments : date de création. Rappels : date
-        d’échéance, statuts actuels et versions distinctes. Un envoi enregistré
-        ne prouve pas une livraison réelle. Aucun contenu pédagogique individuel
-        n’est affiché.
-      </p>
+      <details className="admin-explanation">
+        <summary>Définition et limites des indicateurs</summary>
+        <p>
+          Révisions, plans et éléments : date de création. Rappels : date
+          d’échéance, statuts actuels et versions distinctes. Un envoi
+          enregistré ne prouve pas une livraison réelle. Aucun contenu
+          pédagogique individuel n’est affiché.
+        </p>
+      </details>
       {resource.loading && <LoadingState />}
       {resource.error && (
         <Alert role="alert">

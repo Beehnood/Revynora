@@ -42,7 +42,11 @@ export function UsersView() {
         {!users.loading && !users.error && users.data?.total === 0 && (
           <p role="status">Aucun utilisateur trouvé.</p>
         )}
-        <h2>Utilisateurs</h2>
+        <p className="admin-result-count">
+          {users.data
+            ? `${users.data.total} compte${users.data.total > 1 ? "s" : ""}`
+            : "Chargement des comptes…"}
+        </p>
         <FormField id="admin-search" label="Rechercher par nom ou e-mail">
           <Input
             id="admin-search"
@@ -53,15 +57,24 @@ export function UsersView() {
             }}
           />
         </FormField>
-        <div className="table-scroll">
+        <p className="admin-scroll-hint">
+          Faites défiler le tableau horizontalement pour voir le rôle, l’état et
+          les actions.
+        </p>
+        <div
+          className="table-scroll"
+          tabIndex={0}
+          role="region"
+          aria-label="Utilisateurs — tableau défilant"
+        >
           <table className="admin-table">
             <thead>
               <tr>
-                <th>Nom</th>
-                <th>E-mail</th>
-                <th>Rôle</th>
-                <th>État</th>
-                <th>Action</th>
+                <th scope="col">Nom</th>
+                <th scope="col">E-mail</th>
+                <th scope="col">Rôle</th>
+                <th scope="col">État</th>
+                <th scope="col">Action</th>
               </tr>
             </thead>
             <tbody>
@@ -71,7 +84,7 @@ export function UsersView() {
                     <Link href={"/utilisateurs/" + u.id}>{u.name}</Link>
                   </td>
                   <td>{u.email}</td>
-                  <td>{u.role}</td>
+                  <td>{u.role === "ADMIN" ? "Administrateur" : "Étudiant"}</td>
                   <td>{u.disabledAt ? "Suspendu" : "Actif"}</td>
                   <td>
                     {u.role !== "ADMIN" && (
@@ -117,7 +130,7 @@ export function UsersView() {
             }}
           />
         )}
-        <div className="saas-actions">
+        <div className="saas-actions admin-pagination">
           <Button
             variant="outline"
             disabled={page === 1}

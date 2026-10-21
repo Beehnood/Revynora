@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { dateLabel } from "@/lib/presentation";
 import Link from "next/link";
 import type { AdminCatalogCourse, AdminPage } from "@revynora/types";
 import {
@@ -64,7 +65,8 @@ export function CatalogList() {
       {data && (
         <Card>
           <p role="status">
-            {data.total} cours du catalogue correspondent à la recherche.
+            {data.total} cours du catalogue{" "}
+            {data.total > 1 ? "correspondent" : "correspond"} à la recherche.
           </p>
           {data.items.length === 0 ? (
             <p>
@@ -99,11 +101,7 @@ export function CatalogList() {
                         </Link>
                       </th>
                       <td>{course.domain}</td>
-                      <td>
-                        {new Date(course.createdAt).toLocaleString("fr-FR", {
-                          timeZone: "UTC",
-                        })}
-                      </td>
+                      <td>{dateLabel(course.createdAt)}</td>
                     </tr>
                   ))}
                 </tbody>

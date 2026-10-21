@@ -85,7 +85,9 @@ it("admin : filtres, pagination, suspension et distinction des revenus simulés"
     audit: [{ id: "audit", action: "USER_ENABLED", createdAt: "2026-10-16" }],
     total: 1,
   });
-  m.data.set("/admin/offers", [{ code: "FREE", priceCents: 0, active: true }]);
+  m.data.set("/admin/offers", [
+    { code: "FREE", priceCents: 0, currency: "eur", active: true },
+  ]);
   render(
     <>
       <AdminView />
@@ -138,7 +140,7 @@ it("états vides et chargement restent explicites", () => {
   m.data.set("/admin/users", { items: [], total: 0 });
   m.data.set("/admin/events", { items: [], audit: [], total: 0 });
   m.data.set("/admin/offers", [
-    { code: "PLUS", priceCents: 250, active: false },
+    { code: "PLUS", priceCents: 250, currency: "eur", active: false },
   ]);
   render(
     <>
@@ -147,6 +149,9 @@ it("états vides et chargement restent explicites", () => {
     </>,
   );
   expect(screen.getByText("Aucun paiement.")).toBeVisible();
+  fireEvent.click(
+    screen.getByText("Offres, événements financiers et journal d’audit"),
+  );
   expect(
     screen.getByText("Aucune action journalisée sur cette période."),
   ).toBeVisible();

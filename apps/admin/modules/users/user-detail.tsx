@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { dateLabel } from "@/lib/presentation";
 import Link from "next/link";
 import type { AdminUser } from "@revynora/types";
 import { Card, PageHeader, Alert, LoadingState } from "@revynora/ui";
@@ -44,13 +45,13 @@ export function UserDetail({ id }: { id: string }) {
             <dt>Rôle</dt>
             <dd>{user.role}</dd>
             <dt>Inscription</dt>
-            <dd>{new Date(user.createdAt).toLocaleString("fr-FR")}</dd>
+            <dd>{dateLabel(user.createdAt)}</dd>
             <dt>État</dt>
             <dd>{user.disabledAt ? "Suspendu" : "Actif"}</dd>
             {user.disabledAt && (
               <>
                 <dt>Suspension</dt>
-                <dd>{new Date(user.disabledAt).toLocaleString("fr-FR")}</dd>
+                <dd>{dateLabel(user.disabledAt)}</dd>
               </>
             )}
           </dl>

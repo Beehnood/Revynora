@@ -1,20 +1,11 @@
 "use client";
+import { RegistrationChart } from "./registration-chart";
+import { money, dateLabel, label } from "@/lib/presentation";
+export { formatCents } from "@/lib/presentation";
 import type { AdminStatistics } from "@revynora/types";
 import { Card, Alert, LoadingState } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
 import { useResource } from "@/lib/use-resource";
-export function formatCents(value: string, currency: string) {
-  const cents = BigInt(value);
-  if (currency.toLowerCase() !== "eur")
-    return cents.toString() + " unités stockées (échelle non vérifiée)";
-  const abs = cents < 0n ? -cents : cents;
-  return (
-    (cents < 0n ? "−" : "") +
-    (abs / 100n).toString() +
-    "," +
-    (abs % 100n).toString().padStart(2, "0")
-  );
-}
 export function StatisticsPanel({ from, to }: { from: string; to: string }) {
   const resource = useResource<AdminStatistics>(
     "/admin/statistics?from=" +
@@ -30,9 +21,9 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
     <section aria-labelledby="statistics-title">
       <h2 id="statistics-title">Statistiques de la période</h2>
       <p>
-        Du {from} au {to} exclu · journées UTC. Les périodes d’abonnement sont
-        comptées à leur date de début ; elles ne représentent pas des abonnés
-        uniques.
+        Du {dateLabel(from, false)} au {dateLabel(to, false)} exclu · journées
+        UTC. Les périodes d’abonnement sont comptées à leur date de début ;
+        elles ne représentent pas des abonnés uniques.
       </p>
       {resource.loading && <LoadingState />}
       {resource.error && (
@@ -44,52 +35,21 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
         </Alert>
       )}
       {data && (
-        <>
+        <div className="admin-statistics-grid">
           <Card>
             <h3>Évolution des inscriptions</h3>
             <p>
-              {total} inscriptions sur la période. Les comptes supprimés ne sont
-              plus comptés.
+              {total} inscription{total > 1 ? "s" : ""} sur la période. Les
+              comptes supprimés ne sont plus comptés.
             </p>
             {total === 0 ? (
               <p role="status">Aucune inscription sur cette période.</p>
             ) : (
-              <figure>
-                <svg
-                  className="admin-registration-chart"
-                  viewBox={`0 0 ${data.registrations.length * 8} 120`}
-                  preserveAspectRatio="none"
-                  role="img"
-                  aria-labelledby="registration-chart-title"
-                  aria-describedby="registration-chart-desc"
-                >
-                  <title id="registration-chart-title">
-                    Inscriptions quotidiennes
-                  </title>
-                  <desc id="registration-chart-desc">
-                    Du {from} au {to} exclu, {total} inscriptions. Maximum :{" "}
-                    {max} par jour. Valeurs exactes dans le tableau suivant.
-                  </desc>
-                  {data.registrations.map((row, i) => (
-                    <rect
-                      key={row.date}
-                      x={i * 8 + 1}
-                      y={110 - (row.count / max) * 100}
-                      width={6}
-                      height={(row.count / max) * 100}
-                      fill="currentColor"
-                    >
-                      <title>
-                        {row.date} : {row.count}
-                      </title>
-                    </rect>
-                  ))}
-                </svg>
-                <figcaption>
-                  Nombre de comptes créés par jour UTC · du {from} au {to}{" "}
-                  exclu.
-                </figcaption>
-              </figure>
+              <RegistrationChart
+                rows={data.registrations}
+                max={max}
+                total={total}
+              />
             )}
             <details>
               <summary>Tableau des inscriptions quotidiennes</summary>
@@ -110,7 +70,7 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
                   <tbody>
                     {data.registrations.map((row) => (
                       <tr key={row.date}>
-                        <th scope="row">{row.date}</th>
+                        <th scope="row">{dateLabel(row.date, false)}</th>
                         <td>{row.count}</td>
                       </tr>
                     ))}
@@ -147,7 +107,7 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
                     {data.subscriptions.map((row) => (
                       <tr key={row.offer + row.status}>
                         <th scope="row">{row.offer}</th>
-                        <td>{row.status}</td>
+                        <td>{label(row.status)}</td>
                         <td>{row.periods}</td>
                         <td>
                           <meter
@@ -209,7 +169,7 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
                             ? "Simulation"
                             : row.provider}
                         </th>
-                        <td>{row.status}</td>
+                        <td>{label(row.status)}</td>
                         <td>{row.requests}</td>
                         <td>{row.inputTokens}</td>
                         <td>{row.outputTokens}</td>
@@ -227,13 +187,20 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
           <Card>
             <h3>Paiements enregistrés</h3>
             <p>
-              Montants distincts par fournisseur, devise et statut. Seul l’EUR
-              est affiché en centimes convertis ; les autres devises gardent
-              leur valeur stockée, sans conversion présumée. Aucun total de
-              revenus réels n’est calculé. Le modèle ne conserve pas
-              l’environnement Stripe test/live ; la configuration actuelle ne
-              prouve pas celui d’un ancien paiement.
+              Montants enregistrés par fournisseur, devise et statut. Aucun
+              revenu réel certifié.
             </p>
+            <details className="admin-explanation">
+              <summary>Sources, devises et vérification</summary>
+              <p>
+                Montants distincts par fournisseur, devise et statut. Seul l’EUR
+                est affiché en centimes convertis ; les autres devises gardent
+                leur valeur stockée, sans conversion présumée. Aucun total de
+                revenus réels n’est calculé. Le modèle ne conserve pas
+                l’environnement Stripe test/live ; la configuration actuelle ne
+                prouve pas celui d’un ancien paiement.
+              </p>
+            </details>
             {data.payments.length === 0 ? (
               <p>Aucun paiement.</p>
             ) : (
@@ -272,12 +239,9 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
                             ? "Simulation — aucun débit réel"
                             : "Non vérifiable (test/réel)"}
                         </td>
-                        <td>{row.status}</td>
+                        <td>{label(row.status)}</td>
                         <td>{row.count}</td>
-                        <td>
-                          {formatCents(row.amountCents, row.currency)}{" "}
-                          {row.currency.toUpperCase()}
-                        </td>
+                        <td>{money(row.amountCents, row.currency)}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -285,7 +249,7 @@ export function StatisticsPanel({ from, to }: { from: string; to: string }) {
               </div>
             )}
           </Card>
-        </>
+        </div>
       )}
     </section>
   );

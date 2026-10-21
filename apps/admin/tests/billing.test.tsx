@@ -50,9 +50,9 @@ it("filtres, pagination, centimes exacts et aucune assimilation au réel", () =>
     screen.getByText(/Simulation — aucun paiement réel/),
   ).toBeInTheDocument();
   expect(screen.getByText(/Paiement non vérifié/)).toBeInTheDocument();
-  expect(screen.getByText(/250 centi-unités · EUR/)).toBeInTheDocument();
+  expect(screen.getByText(/2,50 €/)).toBeInTheDocument();
   expect(
-    screen.getByText(/0 unités stockées \(échelle non vérifiée\) · USD/),
+    screen.getByText(/0 unités stockées \(échelle non vérifiée\) USD/),
   ).toBeVisible();
   fireEvent.click(screen.getByRole("button", { name: "Suivant" }));
   expect(m.paths.at(-1)).toContain("page=2");
@@ -80,9 +80,7 @@ it("chargement, erreur, reprise et page vide", () => {
   m.error = "";
   m.data = { items: [], total: 0 };
   view.rerender(<BillingPanel kind="payments" />);
-  expect(
-    screen.getByText("Aucun résultat sur cette page."),
-  ).toBeInTheDocument();
+  expect(screen.getByText("Aucun paiement enregistré.")).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Suivant" })).toBeDisabled();
 });
 it("périodes historiques sans prétendre accorder un droit actuel", () => {
@@ -105,9 +103,19 @@ it("périodes historiques sans prétendre accorder un droit actuel", () => {
   render(<BillingPanel kind="subscriptions" />);
   expect(screen.getByText(/ne prouve pas un droit actuel/)).toBeInTheDocument();
   expect(screen.getByText(/Annulation prévue/)).toBeInTheDocument();
-  expect(screen.getByText(/-1 centi-unités/)).toBeInTheDocument();
+  expect(screen.getByText(/−0,01 €/)).toBeInTheDocument();
   fireEvent.change(screen.getByLabelText("Offre"), {
     target: { value: "FREE" },
   });
   expect(m.paths.at(-2)).toContain("plan=FREE");
+});
+
+it("distingue une liste vide d’une recherche sans résultat", () => {
+  m.data = { items: [], total: 0 };
+  render(<BillingPanel kind="payments" />);
+  expect(screen.getByText("Aucun paiement enregistré.")).toBeVisible();
+  fireEvent.change(screen.getByRole("combobox", { name: "Fournisseur" }), {
+    target: { value: "stripe" },
+  });
+  expect(screen.getByText("Aucun résultat pour ces filtres.")).toBeVisible();
 });

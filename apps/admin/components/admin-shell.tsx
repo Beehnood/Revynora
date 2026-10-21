@@ -65,9 +65,6 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             </Link>
           ))}
         </nav>
-        <p className="admin-future">
-          Les autres modules seront disponibles dans de prochains lots.
-        </p>
         <Button
           variant="outline"
           disabled={busy}

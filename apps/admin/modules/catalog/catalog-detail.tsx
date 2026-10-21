@@ -1,4 +1,5 @@
 "use client";
+import { dateLabel } from "@/lib/presentation";
 import Link from "next/link";
 import type { AdminCatalogCourseDetail } from "@revynora/types";
 import { Card, PageHeader, LoadingState, Alert } from "@revynora/ui";
@@ -36,11 +37,7 @@ export function CatalogDetail({ id }: { id: string }) {
             <dt>Origine</dt>
             <dd>Catalogue éditorial</dd>
             <dt>Création UTC</dt>
-            <dd>
-              {new Date(course.createdAt).toLocaleString("fr-FR", {
-                timeZone: "UTC",
-              })}
-            </dd>
+            <dd>{dateLabel(course.createdAt)}</dd>
           </dl>
           <h3>Contenu</h3>
           {course.content ? (
