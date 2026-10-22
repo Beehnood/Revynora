@@ -19,7 +19,8 @@
     "test:coverage": {
       "outputs": ["coverage/**"],
       "dependsOn": ["^build"],
-      "cache": false
+      "cache": false,
+      "passThroughEnv": ["DATABASE_URL", "TEST_DATABASE_URL"]
     }
   },
   "globalEnv": [
