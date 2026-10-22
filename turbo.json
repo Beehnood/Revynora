@@ -20,7 +20,11 @@
       "outputs": ["coverage/**"],
       "dependsOn": ["^build"],
       "cache": false,
-      "passThroughEnv": ["DATABASE_URL", "TEST_DATABASE_URL"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "TEST_DATABASE_URL",
+        "G8_ISOLATED_TEST_DB"
+      ]
     }
   },
   "globalEnv": [
@@ -36,6 +40,7 @@
   "globalPassThroughEnv": [
     "DATABASE_URL",
     "TEST_DATABASE_URL",
+    "G8_ISOLATED_TEST_DB",
     "PORT",
     "HOST",
     "TRUST_PROXY_HOPS",

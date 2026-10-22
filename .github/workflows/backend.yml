@@ -31,8 +31,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      DATABASE_URL: postgresql://revynora:local_dev_only@localhost:5433/revynora?schema=public
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
       WORKER_ENABLED: "false"
+      G8_ISOLATED_TEST_DB: "true"
     services:
       postgres:
         image: postgres:17.6-alpine

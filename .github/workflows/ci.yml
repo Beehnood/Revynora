@@ -11,12 +11,13 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DATABASE_URL: postgresql://revynora:local_dev_only@localhost:5433/revynora_test?schema=public
-      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@localhost:5433/revynora_test?schema=public
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
       WEB_ORIGIN: http://localhost:3000
       PORT: 3001
       NEXT_TELEMETRY_DISABLED: 1
       TURBO_TELEMETRY_DISABLED: 1
+      G8_ISOLATED_TEST_DB: "true"
     services:
       postgres:
         image: postgres:17.6-alpine
