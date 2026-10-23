@@ -24,6 +24,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   validate:
+    name: mobile-validation
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
