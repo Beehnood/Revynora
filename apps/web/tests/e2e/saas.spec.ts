@@ -154,6 +154,12 @@ test("Refus de paiement, Free et administration protégée", async ({ page }) =>
     await expect(
       page.getByRole("heading", { name: "Administration", exact: true }),
     ).toBeVisible();
+    // G.7 groups the catalog in a disclosure; follow the real navigation.
+    await page
+      .getByText("Offres, événements financiers et journal d’audit", {
+        exact: true,
+      })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Catalogue des offres" }),
     ).toBeVisible();

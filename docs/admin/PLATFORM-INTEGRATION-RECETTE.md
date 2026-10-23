@@ -1,5 +1,7 @@
 # Intégration locale G.1–G.8 avec main — 22 octobre 2026
 
+Les sections initiales décrivent la recette du 22 octobre, avant publication de la branche et ouverture de la PR. Le complément du 23 octobre ci-dessous décrit le correctif local de la PR #5.
+
 ## Git et périmètre
 
 Branche `feature/platform-integration`, départ G.8 `496150034a12ca14710bfced6776c65c6b1e8e48`, dépôt initial propre. Fetch origin effectué. Merge normal de `origin/main` (`8db3ab34a5fbfc74328602c30034963e3f2830ca`) : `2eb8183785f2fcb97caa5298d497121f931f0dfa`, parents G.8 puis origin/main. Seul conflit : turbo.json ; suppression d'une seconde définition identique de dev, conservation des dépendances ^build, sorties Next/dist/Expo, couverture sans cache et variables CI existantes. Aucun autre conflit.
@@ -65,3 +67,56 @@ Aucun DROP TABLE, TRUNCATE ou reset dans ces cinq migrations. Certaines migratio
 ## Décision avant PR
 
 GO pour revue des corrections locales, pas pour fusion ni déploiement. Avant PR : validation des fichiers non commitées, espace Docker disponible et nouvelle vérification du build migration, puis autorisation de commit/publication de la branche et exécution des cinq workflows GitHub, dont la suite navigateur étudiante Quality. Migration applicative et activation du propriétaire restent hors autorisation. Aucun développement G.9.
+
+## Complément du 23 octobre — corrections locales de la PR #5
+
+Référence initiale vérifiée : feature/platform-integration, HEAD 51a4677daf2fdaf607eff70aa94c8d295ff85e3e, dépôt propre ; PR #5 ouverte sur main 8db3ab34a5fbfc74328602c30034963e3f2830ca. Les derniers runs distants de cette référence sont Backend/Web/Admin réussis, Quality/Mobile échoués. Aucun changement de main, feature/admin-dashboard ou de sa référence distante.
+
+### Expo : cause, périmètre et sécurité
+
+Le contrôle Expo en ligne compare les versions aux recommandations officielles : SDK 57 attend ~57.0.31, alors que le projet épingle 57.0.30. Correction : expo épinglé exactement à 57.0.31 et lockfile régénéré avec pnpm 10.18.3. React 19.2.3, React Native 0.86.3, TypeScript Mobile 6.0.3 et TypeScript des autres workspaces 5.9.3 restent inchangés, conformément aux métadonnées SDK 57. Aucun passage à SDK 58.
+
+Chaîne vérifiée dans les métadonnées npm : expo@57.0.31 dépend de @expo/config-plugins@~57.0.11, qui dépend de xcode@^4.0.0. L'ajout de xcode@4.0.0 a fait l'objet d'une autorisation utilisateur explicite et limitée à cette majeure transitive. Aucun autre changement majeur détecté.
+
+Versions de paquets ajoutées au lockfile : expo@57.0.31, @expo/cli@57.0.32, @expo/config-plugins@57.0.11, @expo/router-server@57.0.14, expo-modules-core@57.0.24, expo-modules-jsi@57.1.3 et xcode@4.0.0. Les anciennes versions correspondantes sont retirées lorsqu'elles ne sont plus nécessaires ; @expo/config-plugins@57.0.10 et xcode@3.0.1 restent requis par d'autres chemins existants. Les nombreuses références de snapshots changent uniquement leur contexte de peer Expo. Aucun autre importer que apps/mobile ne change. Une métadonnée de dépréciation ESLint est rafraîchie par le registre, sans changement de sa version.
+
+Deux installations pnpm install --frozen-lockfile ont réussi dans les laboratoires. Aucun avis connu retourné par l'API npm advisories/bulk pour ces sept nouvelles versions à la date de la recette ; ce contrôle ne constitue pas une garantie d'absence de vulnérabilité du monorepo entier. Le warning de peer préexistant de test-renderer/react-reconciler demandant React ^19.3.0 reste documenté ; aucune mise à jour React non autorisée n'est effectuée. Les tests Mobile passent avec les versions conservées.
+
+Sources : [matrice SDK Expo](https://docs.expo.dev/versions/latest/), [métadonnées officielles SDK](https://exp.host/--/api/v2/versions), [Expo 57.0.31](https://registry.npmjs.org/expo/57.0.31), [config-plugins 57.0.11](https://registry.npmjs.org/@expo%2fconfig-plugins/57.0.11).
+
+### Timeout : diagnostic et correction
+
+Test identifié : apps/mobile/tests/screens.test.tsx, « native login validates input and never exposes password by default », délai Jest existant de 5 s. session.authenticate est mocké avec une promesse immédiatement résolue : ce test n'effectue ni requête HTTP ni scrypt. L'API effectue du scrypt dans une autre suite, qui partage la capacité CPU du runner lorsqu'elle s'exécute en parallèle.
+
+Quality lance plusieurs suites de couverture via Turbo simultanément. --runInBand sérialise les tests de Jest mais pas les processus Vitest des autres workspaces. Dans un laboratoire Linux Node 22 limité à 2 vCPU, l'exécution parallèle de référence reproduit exactement l'échec : 23 tests Mobile réussis et le même test en timeout. Les compteurs CPU observés montrent 464 périodes de limitation sur 541. Ces mesures concernent le laboratoire contrôlé ; aucune mesure CPU directe du runner GitHub n'est revendiquée.
+
+Sur les mêmes versions de référence, pnpm test:coverage --concurrency=1 passe toutes les suites. La seule modification du workflow Quality est cette option de planification, avec un commentaire explicatif. Les timeouts, assertions, mocks, guards, paramètres scrypt et seuils de couverture ne changent pas ; aucun test n'est retiré ou ignoré. Deux relances Mobile complètes avec cache Jest froid sur le candidat passent 24/24 chacune : durée du test de connexion 4210 ms puis 2833 ms, sous le délai conservé de 5000 ms.
+
+### Scénario étudiant ancien révélé par la recette complète
+
+La première exécution effective de la suite étudiante révèle 16 succès et un échec : un scénario attend Catalogue des offres alors que G.7 le place dans un panneau details replié. L'état de la page confirme que l'authentification et le dashboard fonctionnent. Le test apps/web/tests/e2e/saas.spec.ts ouvre désormais « Offres, événements financiers et journal d’audit » avant de vérifier le titre. L'assertion de visibilité, les contrôles de permissions, paiement et Axe sont conservés. Aucune modification du composant applicatif.
+
+### Validations du candidat
+
+Recette dans des conteneurs dédiés sans .env, avec PostgreSQL neuf en tmpfs et Redis éphémère ; URL loopback revynora_test et G8_ISOLATED_TEST_DB=true explicitement transmis. Aucun port publié sur l'hôte, aucune base applicative utilisée. Les quatre conteneurs dédiés ont été supprimés après sauvegarde des preuves. Les trois comptes synthétiques laissés par des relances API interrompues ont disparu avec la base éphémère ; aucun compte des scénarios navigateur G.7/G.8 ne subsistait. Aucun service de développement préexistant n’a été arrêté. Les dépendances ne sont pas réinstallées dans le dépôt principal. Résultats et commandes exactes : /private/tmp/revynora-pr5-ci-6kglg5kj, également désigné par /private/tmp/revynora-pr5-ci-location.
+
+| Contrôle                                          | Résultat                                                                                         |
+| ------------------------------------------------- | ------------------------------------------------------------------------------------------------ |
+| Installation figée du candidat                    | Réussie dans les deux laboratoires                                                               |
+| expo install --check en ligne                     | Réussi, sans désactiver le contrôle de compatibilité                                             |
+| ESLint et TypeScript des workspaces               | Réussis ; scénario Web corrigé revérifié séparément                                              |
+| Prisma validate, frontières, intégrité historique | Réussis ; 5 tests du vérificateur de frontières réussis                                          |
+| Couverture complète séquentielle                  | 231 tests réussis : API 117, Admin 43, Web 44, Mobile 24, client API 3 ; seuils conservés        |
+| Intégrations PostgreSQL G.8                       | Incluses dans les 117 API réussis ; neuf migrations appliquées uniquement au PostgreSQL éphémère |
+| Builds API/Web/Admin                              | Réussis ; variantes loopback réservées à la recette                                              |
+| Exports Android/iOS Expo 57.0.31                  | Réussis, sortie /tmp/mobile-export dans le laboratoire                                           |
+| Playwright étudiant avec Axe                      | 17 réussis après correction de navigation, aucun test ignoré                                     |
+| Playwright Admin G.2–G.8 avec Axe                 | 23 réussis : 14 G.2–G.6, 5 G.7, 4 G.8 ; aucune violation Axe détectée aux largeurs prévues       |
+
+### Incidents locaux et limites
+
+Le disque interne Docker est saturé. Le premier laboratoire a produit une erreur Redis RDB ENOSPC puis un timeout HTTP API lors d'une autre relance. Redis de test a été recréé en tmpfs ; un second environnement avec caches et sorties en mémoire a permis la couverture complète verte, sans modifier le code API. APT a initialement échoué faute d'espace ; sa préparation a réussi avec ses caches en mémoire et vérification des signatures conservée. Chromium sur tmpfs noexec a d'abord empêché le démarrage des 17 tests, puis son cache a été copié dans un répertoire exécutable du conteneur. Le premier build combiné a rencontré EBUSY en supprimant le point de montage dist ; les exports ont ensuite réussi avec le même exporteur vers un sous-dossier temporaire, et les builds serveur séparés ont réussi. Aucun de ces échecs n'est déclaré comme un succès.
+
+Le build Docker de migration du candidat n'est pas relancé faute d'espace interne ; celui de la référence distante 51a4677 a réussi dans Backend validation sur GitHub. Aucun nettoyage Docker global n'a été effectué. Les compilations natives signées, appareils physiques, Safari et fournisseurs réels ne sont pas testés. Les exports JS/Hermes Android/iOS ne constituent pas des binaires natifs signés.
+
+Fichiers du correctif : .github/workflows/ci.yml, apps/mobile/package.json, pnpm-lock.yaml, apps/web/tests/e2e/saas.spec.ts et ce bilan. Aucun fichier de production, modèle Prisma, migration, permission ou fonctionnalité métier modifié. La publication du correctif reste soumise à revue ; aucun push ni merge. Les cinq workflows devront être verts sur le nouveau SHA après autorisation de push. Les contrôles obligatoires et approbations de main restent à cadrer séparément ; aucune protection distante n'est modifiée ici.
