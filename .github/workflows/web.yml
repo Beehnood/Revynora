@@ -37,6 +37,7 @@ jobs:
           node-version: 22
           cache: pnpm
       - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
       - run: pnpm exec turbo typecheck --filter=@revynora/web
       - run: pnpm --filter @revynora/web lint
       - run: pnpm --filter @revynora/web test:coverage
