@@ -1,0 +1,45 @@
+{
+  "expo": {
+    "name": "Revynora",
+    "slug": "revynora",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "dev.watercode.revynora",
+      "config": {
+        "usesNonExemptEncryption": false
+      }
+    },
+    "android": {
+      "package": "dev.watercode.revynora",
+      "permissions": [],
+      "blockedPermissions": [
+        "android.permission.RECORD_AUDIO",
+        "android.permission.CAMERA",
+        "android.permission.ACCESS_FINE_LOCATION"
+      ]
+    },
+    "platforms": ["ios", "android"],
+    "plugins": [
+      [
+        "expo-secure-store",
+        {
+          "configureAndroidBackup": true
+        }
+      ],
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-mark.png",
+          "imageWidth": 180,
+          "resizeMode": "contain",
+          "backgroundColor": "#f7f9fc"
+        }
+      ]
+    ],
+    "icon": "./assets/icon.png",
+    "scheme": "revynora"
+  }
+}

@@ -12,7 +12,7 @@ import {
   UseGuards,
 } from "@nestjs/common";
 import { z } from "zod";
-import { StudentGuard } from "../../auth/student.guard";
+import { LearningAccessGuard } from "../../auth/learning-access.guard";
 import type { AuthRequest } from "../../auth/auth.service";
 import { parse } from "../../shared/http/errors";
 import { LeitnerUseCases } from "../application/leitner.use-cases";
@@ -24,11 +24,11 @@ const card = z
   .object({
     front: z.string().trim().min(1).max(1000),
     back: z.string().trim().min(1).max(4000),
-    courseId: z.string().uuid().optional(),
+    courseId: z.string().uuid().nullable().optional(),
   })
   .strict();
 @Controller("leitner")
-@UseGuards(StudentGuard)
+@UseGuards(LearningAccessGuard)
 export class LeitnerController {
   constructor(@Inject(LeitnerUseCases) private readonly use: LeitnerUseCases) {}
   @Get("cards") list(@Req() r: AuthRequest, @Query() q: unknown) {
@@ -78,6 +78,7 @@ export class LeitnerController {
             requestId: z.string().uuid(),
             version: z.number().int().min(0),
             remembered: z.boolean(),
+            durationSeconds: z.number().int().min(0).max(3600).optional(),
           })
           .strict(),
         b,

@@ -10,3 +10,17 @@ playwright-report/
 test-results/
 *.tsbuildinfo
 .DS_Store
+.expo/
+
+# Native signing and deployment state
+**/.vercel/
+**/credentials.json
+**/*.keystore
+**/*.jks
+**/*.mobileprovision
+**/*.p12
+**/google-services.json
+**/GoogleService-Info.plist
+**/.env.production
+**/.env.staging
+**/*.pem

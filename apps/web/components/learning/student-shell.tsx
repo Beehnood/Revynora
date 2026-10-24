@@ -16,7 +16,7 @@ import {
   CalendarDays,
   ArrowUpRight,
 } from "../icons";
-import { History, LogOut } from "lucide-react";
+import { History, LogOut, TrendingUp } from "lucide-react";
 import { Badge, Alert } from "../ui";
 import { api, message } from "@/lib/api";
 const UserContext = createContext<UserProfile | null>(null);
@@ -31,6 +31,7 @@ const links = [
   { name: "Mes tests", href: "/app/historique", icon: History },
   { name: "Mes cours", href: "/app/cours", icon: BookOpen },
   { name: "Révisions", href: "/app/revisions", icon: Repeat2 },
+  { name: "Progression", href: "/app/progression", icon: TrendingUp },
   { name: "Planning", href: "/app/planning", icon: CalendarDays },
   { name: "Abonnement", href: "/app/abonnement", icon: GraduationCap },
   { name: "Notifications", href: "/app/notifications", icon: Settings },
@@ -63,7 +64,11 @@ export function StudentShell({
           }}
         >
           <Brand />
-          <span className="sidebar-label">MON ESPACE ÉTUDIANT</span>
+          <span className="sidebar-label">
+            {user.role === "ADMIN"
+              ? "MON ESPACE PÉDAGOGIQUE"
+              : "MON ESPACE ÉTUDIANT"}
+          </span>
           <nav aria-label="Navigation étudiant">
             {links.map((l) => (
               <Link
@@ -76,10 +81,20 @@ export function StudentShell({
                 {l.name}
               </Link>
             ))}
+            {user.role === "ADMIN" && (
+              <Link href="/admin">
+                <Settings size={19} />
+                Administration
+              </Link>
+            )}
           </nav>
           <div className="sidebar-bottom">
             <div className="sidebar-tip">
-              <Badge>{user.plan}</Badge>
+              <Badge>
+                {user.learningAccess?.source === "INTERNAL"
+                  ? "Accès interne · équivalent Pro"
+                  : user.plan}
+              </Badge>
               <h3>Chaque essai te fait avancer.</h3>
               <p>
                 Un test pour découvrir ce que tu sais, un cours pour aller plus
@@ -124,7 +139,8 @@ export function StudentShell({
               {open ? <X /> : <Menu />}
             </button>
             <span className="breadcrumb">
-              Espace étudiant <span>/</span>{" "}
+              {user.role === "ADMIN" ? "Espace pédagogique" : "Espace étudiant"}{" "}
+              <span>/</span>{" "}
               {links.find((l) => l.href === pathname)?.name ?? "Mon diagnostic"}
             </span>
             <div className="profile">
@@ -133,7 +149,11 @@ export function StudentShell({
               </span>
               <div>
                 <strong>{user.name}</strong>
-                <small>Étudiant · {user.plan}</small>
+                <small>
+                  {user.role === "ADMIN"
+                    ? "ADMIN · accès pédagogique interne"
+                    : `Étudiant · ${user.plan}`}
+                </small>
               </div>
             </div>
           </header>
@@ -141,7 +161,7 @@ export function StudentShell({
             {error && <Alert role="alert">{error}</Alert>}
             {children}
             <p className="dashboard-footnote">
-              Revynora · Ton espace d’apprentissage privé · Phase 2
+              Revynora · Ton espace d’apprentissage privé
             </p>
           </main>
         </div>

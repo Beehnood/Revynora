@@ -58,8 +58,12 @@ model User {
   leitnerCards LeitnerCard[]
   revisions Revision[]
   studyPlans StudyPlan[]
+  availability StudyAvailability[]
   emails EmailMessage[]
   auditActions AuditLog[] @relation("AuditActor")
+  grants InternalLearningGrant[] @relation("LearningBeneficiary")
+  issuedGrants InternalLearningGrant[] @relation("LearningIssuer")
+  revokedGrants InternalLearningGrant[] @relation("LearningRevoker")
 }
 model Session {
   id String @id @default(uuid())
@@ -83,6 +87,7 @@ model Course {
   quizzes Quiz[]
   cards LeitnerCard[]
   revisions Revision[]
+  planItems StudyPlanItem[]
   @@index([ownerId, createdAt])
 }
 model Quiz {
@@ -285,6 +290,7 @@ model Revision {
   courseId String?
   course Course? @relation(fields:[courseId],references:[id],onDelete:SetNull)
   requestId String @unique
+  durationSeconds Int?
   remembered Boolean
   fromBox Int
   toBox Int
@@ -299,6 +305,8 @@ model StudyPlan {
   title String
   timeZone String
   createdAt DateTime @default(now())
+  generationKey String? @unique
+  generationHash String?
   items StudyPlanItem[]
   @@index([userId, createdAt])
 }
@@ -307,13 +315,19 @@ model StudyPlanItem {
   planId String
   plan StudyPlan @relation(fields:[planId],references:[id],onDelete:Cascade)
   title String
+  courseId String?
+  course Course? @relation(fields:[courseId],references:[id],onDelete:SetNull)
+  kind String @default("REVISION")
+  priority Int @default(2)
   startsAt DateTime
   endsAt DateTime
   status TaskStatus @default(PLANNED)
   reminderMinutes Int?
   version Int @default(0)
   createdAt DateTime @default(now())
+  versions StudyPlanItemVersion[]
   @@index([startsAt])
+  @@index([planId, startsAt])
 }
 model EmailMessage {
   id String @id @default(uuid())
@@ -354,4 +368,50 @@ model ReminderDelivery {
  dueAt DateTime
  status String @default("PENDING")
  @@unique([itemId, version])
+}
+
+model StudyPlanItemVersion {
+ id String @id @default(uuid())
+ itemId String
+ item StudyPlanItem @relation(fields:[itemId],references:[id],onDelete:Cascade)
+ version Int
+ title String
+ startsAt DateTime
+ endsAt DateTime
+ status TaskStatus
+ reminderMinutes Int?
+ courseId String?
+ kind String @default("REVISION")
+ priority Int @default(2)
+ recordedAt DateTime @default(now())
+ @@unique([itemId,version])
+}
+
+model StudyAvailability {
+ id String @id @default(uuid())
+ userId String
+ user User @relation(fields:[userId],references:[id],onDelete:Cascade)
+ startsAt DateTime
+ endsAt DateTime
+ @@index([userId, startsAt])
+}
+
+// Internal access is independent of commercial subscriptions and payments.
+model InternalLearningGrant {
+  id String @id @default(uuid())
+  userId String
+  user User @relation("LearningBeneficiary", fields:[userId], references:[id], onDelete:Restrict)
+  level Plan @default(PRO)
+  startsAt DateTime
+  expiresAt DateTime?
+  provenance String
+  justification String
+  createdAt DateTime @default(now())
+  issuedById String
+  issuedBy User @relation("LearningIssuer", fields:[issuedById], references:[id], onDelete:Restrict)
+  revokedAt DateTime?
+  revokedById String?
+  revokedBy User? @relation("LearningRevoker", fields:[revokedById], references:[id], onDelete:Restrict)
+  revocationReason String?
+  @@index([userId, revokedAt, startsAt])
 }

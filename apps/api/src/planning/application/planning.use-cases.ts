@@ -1,4 +1,4 @@
-import type { GetEntitlements } from "../../billing/application/billing.use-cases";
+import type { GetLearningAccess } from "../../learning-access/application/learning-access";
 import type {
   PlanRepository,
   GenerateInput,
@@ -7,8 +7,27 @@ import type {
 export class PlanningUseCases {
   constructor(
     private readonly repo: PlanRepository,
-    private readonly access: GetEntitlements,
+    private readonly access: GetLearningAccess,
   ) {}
+  async rename(user: string, id: string, title: string) {
+    await this.access.require(user, "PRO");
+    return this.repo.rename(user, id, title);
+  }
+  async availability(user: string) {
+    await this.access.require(user, "PRO");
+    return this.repo.availability(user);
+  }
+  async saveAvailability(
+    user: string,
+    slots: { startsAt: Date; endsAt: Date }[],
+  ) {
+    await this.access.require(user, "PRO");
+    return this.repo.saveAvailability(user, slots);
+  }
+  async history(user: string, id: string, page: number) {
+    await this.access.require(user, "PRO");
+    return this.repo.history(user, id, page);
+  }
   async list(user: string, from: Date, to: Date) {
     await this.access.require(user, "PRO");
     return this.repo.list(user, from, to);

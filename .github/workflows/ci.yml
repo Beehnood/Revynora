@@ -8,15 +8,17 @@ permissions:
   contents: read
 jobs:
   foundation:
+    name: quality-foundation
     runs-on: ubuntu-latest
     timeout-minutes: 20
     env:
-      DATABASE_URL: postgresql://revynora:local_dev_only@localhost:5433/revynora_test?schema=public
-      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@localhost:5433/revynora_test?schema=public
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
       WEB_ORIGIN: http://localhost:3000
       PORT: 3001
       NEXT_TELEMETRY_DISABLED: 1
       TURBO_TELEMETRY_DISABLED: 1
+      G8_ISOLATED_TEST_DB: "true"
     services:
       postgres:
         image: postgres:17.6-alpine
@@ -43,13 +45,20 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-      - run: pnpm db:migrate
+      - run: pnpm check:boundaries
+      - run: node --test scripts/check-boundaries.test.mjs
+      - run: pnpm check:prisma-integrity
       - run: pnpm format:check
       - run: pnpm lint
       - run: pnpm typecheck
-      - run: pnpm test:coverage
+        env:
+          API_URL: http://127.0.0.1:3001
+      # Avoid competing Jest/Vitest coverage processes on the same runner.
+      - run: pnpm test:coverage --concurrency=1
       - run: pnpm build
-      - run: pnpm db:check
+        env:
+          API_URL: http://127.0.0.1:3001
+      - run: pnpm --filter @revynora/mobile exec expo install --check
       - run: pnpm --filter @revynora/web exec playwright install --with-deps chromium
       - run: pnpm test:e2e
       - uses: actions/upload-artifact@v4
@@ -58,5 +67,6 @@ jobs:
           name: quality-reports
           path: |
             apps/*/coverage
+            packages/*/coverage
             apps/web/playwright-report
             apps/web/test-results

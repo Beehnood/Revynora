@@ -1,3 +1,4 @@
+import { environmentSchema } from "@revynora/validation";
 import { describe, it, expect } from "vitest";
 import { resolveEntitlement, type Period } from "../billing/domain/billing";
 import { scheduleReview } from "../leitner/domain/leitner";
@@ -22,6 +23,35 @@ const p = (
   cancelAtPeriodEnd: false,
 });
 describe("Règles SaaS", () => {
+  it("intervalles Leitner configurables, valeurs par défaut et rejet des paramètres invalides", () => {
+    expect(scheduleReview(3, true, now).nextDueAt).toEqual(
+      new Date(+now + 14 * 86400000),
+    );
+    expect(scheduleReview(4, true, now).nextDueAt).toEqual(
+      new Date(+now + 30 * 86400000),
+    );
+    expect(scheduleReview(2, true, now, [1, 3, 6, 12, 24]).nextDueAt).toEqual(
+      new Date(+now + 6 * 86400000),
+    );
+    for (const config of [
+      [1, 2],
+      [1, 1, 4, 8, 16],
+      [0, 2, 4, 8, 16],
+    ])
+      expect(() => scheduleReview(1, true, now, config)).toThrow();
+    expect(
+      environmentSchema.safeParse({
+        DATABASE_URL: "postgresql://test:test@localhost/test",
+        LEITNER_INTERVAL_DAYS: "1,2,4,8,16",
+      }).success,
+    ).toBe(true);
+    expect(
+      environmentSchema.safeParse({
+        DATABASE_URL: "postgresql://test:test@localhost/test",
+        LEITNER_INTERVAL_DAYS: "1,1,4,8,16",
+      }).success,
+    ).toBe(false);
+  });
   it("résout Free, périodes expirées, futures, impayées et hiérarchie", () => {
     expect(resolveEntitlement([], now).plan).toBe("FREE");
     expect(resolveEntitlement([p("PLUS", "PAST_DUE")], now).plan).toBe("FREE");
@@ -64,6 +94,7 @@ describe("Règles SaaS", () => {
       "notifications",
       "admin",
       "privacy",
+      "progress",
     ])
       for (const layer of ["domain", "application"]) {
         const dir = join(process.cwd(), "src", module, layer);

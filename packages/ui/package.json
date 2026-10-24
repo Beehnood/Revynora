@@ -1,0 +1,36 @@
+{
+  "name": "@revynora/ui",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.tsx",
+    "./button": "./src/button.tsx",
+    "./utils": "./src/utils.ts",
+    "./brand": "./src/brand.tsx",
+    "./styles.css": "./styles.css"
+  },
+  "peerDependencies": {
+    "react": "19.2.3",
+    "react-dom": "19.2.3",
+    "next": "16.4.1"
+  },
+  "dependencies": {
+    "@radix-ui/react-slot": "1.2.3",
+    "class-variance-authority": "0.7.1",
+    "clsx": "2.1.1",
+    "tailwind-merge": "3.3.1",
+    "tailwindcss": "4.1.16"
+  },
+  "devDependencies": {
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@types/node": "22.18.12",
+    "typescript": "5.9.3",
+    "eslint": "9.39.1",
+    "eslint-config-next": "16.4.1"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint src"
+  }
+}

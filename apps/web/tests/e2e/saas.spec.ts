@@ -50,7 +50,7 @@ for (const width of [375, 1280])
     await expect(page.getByRole("button", { name: /Résilier/ })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
-      path: `../../docs/phase2/abonnement-${width}.png`,
+      path: `../../docs/phase2.5/abonnement-${width}.png`,
       fullPage: true,
     });
     await page.goto("/app/revisions");
@@ -65,7 +65,7 @@ for (const width of [375, 1280])
     await expect(page.getByText("Paris.", { exact: true })).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
-      path: `../../docs/phase2/leitner-${width}.png`,
+      path: `../../docs/phase2.5/leitner-${width}.png`,
       fullPage: true,
     });
     await page.getByRole("button", { name: "Retenu (2)" }).click();
@@ -83,7 +83,7 @@ for (const width of [375, 1280])
     ).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
-      path: `../../docs/phase2/planning-${width}.png`,
+      path: `../../docs/phase2.5/planning-${width}.png`,
       fullPage: true,
     });
     await page.goto("/app/notifications");
@@ -141,15 +141,31 @@ test("Refus de paiement, Free et administration protégée", async ({ page }) =>
   try {
     await db.user.update({ where: { id: user.id }, data: { role: "ADMIN" } });
     await page.goto("/admin");
+    await expect(page).toHaveURL("http://127.0.0.1:3002/");
+    await page.context().clearCookies();
+    await page.goto("http://127.0.0.1:3002/");
+    await expect(page).toHaveURL("http://127.0.0.1:3002/connexion");
+    await page.getByLabel("Adresse e-mail").fill(email);
+    await page.getByLabel("Mot de passe", { exact: true }).fill(password);
+    await page
+      .getByRole("button", { name: "Me connecter", exact: true })
+      .click();
+    await expect(page).toHaveURL("http://127.0.0.1:3002/");
     await expect(
       page.getByRole("heading", { name: "Administration", exact: true }),
     ).toBeVisible();
+    // G.7 groups the catalog in a disclosure; follow the real navigation.
+    await page
+      .getByText("Offres, événements financiers et journal d’audit", {
+        exact: true,
+      })
+      .click();
     await expect(
       page.getByRole("heading", { name: "Catalogue des offres" }),
     ).toBeVisible();
     await page.evaluate(() => window.scrollTo(0, 0));
     await page.screenshot({
-      path: "../../docs/phase2/admin-1280.png",
+      path: "../../docs/phase2.5/admin-1280.png",
       fullPage: true,
     });
     expect(

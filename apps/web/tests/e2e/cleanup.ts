@@ -11,6 +11,7 @@ export default async function cleanup() {
       OR: [
         { email: { startsWith: "e2e-phase1-", endsWith: "@example.test" } },
         { email: { startsWith: "e2e-phase2-", endsWith: "@example.test" } },
+        { email: { startsWith: "e2e-phase3-", endsWith: "@example.test" } },
       ],
     };
     const users = await db.user.findMany({ where, select: { id: true } });

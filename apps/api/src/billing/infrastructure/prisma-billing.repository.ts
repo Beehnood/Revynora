@@ -199,6 +199,17 @@ export class PrismaBillingRepository implements BillingRepository {
               "INVALID_PERIOD",
               "Période de facturation invalide.",
             );
+          if (snapshot.status === "ACTIVE")
+            await tx.userSubscriptionHistory.updateMany({
+              where: {
+                userId: snapshot.userId,
+                provider: "internal",
+                subscription: { code: "FREE" },
+                startsAt: { lt: snapshot.startsAt },
+                endsAt: { gt: snapshot.startsAt },
+              },
+              data: { endsAt: snapshot.startsAt },
+            });
           const current = await tx.userSubscriptionHistory.findFirst({
             where: {
               userId: snapshot.userId,

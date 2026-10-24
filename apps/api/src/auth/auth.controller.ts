@@ -13,7 +13,7 @@ import type { Request, Response } from "express";
 import { registerSchema, loginSchema } from "@revynora/validation";
 import { AuthService, type AuthRequest } from "./auth.service";
 import { SessionGuard } from "./session.guard";
-import { parse } from "../shared/http/errors";
+import { ApiError, parse } from "../shared/http/errors";
 @ApiTags("Authentification")
 @Controller("auth")
 export class AuthController {
@@ -55,6 +55,30 @@ export class AuthController {
     @Res({ passthrough: true }) res: Response,
   ) {
     return this.auth.login(parse(loginSchema, body), req, res);
+  }
+  private nativeRequest(req: Request) {
+    if (req.headers.origin || req.headers["x-revynora-client"] !== "mobile")
+      throw new ApiError(
+        403,
+        "NATIVE_REQUEST_REQUIRED",
+        "Client natif requis.",
+      );
+  }
+  @Post("mobile/register") mobileRegister(
+    @Body() body: unknown,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.nativeRequest(req);
+    return this.auth.register(parse(registerSchema, body), req, res, true);
+  }
+  @Post("mobile/login") mobileLogin(
+    @Body() body: unknown,
+    @Req() req: Request,
+    @Res({ passthrough: true }) res: Response,
+  ) {
+    this.nativeRequest(req);
+    return this.auth.login(parse(loginSchema, body), req, res, true);
   }
   @Post("logout") logout(
     @Req() req: Request,

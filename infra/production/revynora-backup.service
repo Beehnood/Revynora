@@ -1,0 +1,10 @@
+[Unit]
+Description=Revynora PostgreSQL backup only
+Requires=docker.service
+After=docker.service
+[Service]
+Type=oneshot
+WorkingDirectory=/opt/revynora/infra/production
+Environment=REVYNORA_BACKUP_DIR=/var/backups/revynora
+ExecStart=/bin/sh /opt/revynora/infra/production/backup.sh
+UMask=0077

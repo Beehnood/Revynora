@@ -1,0 +1,11 @@
+{
+  "prisma/schema.prisma": "d8bc27b9fa2a35c7b03d303b775bb4992d0bd9b7052d361bdd62a56f8a64a5fa",
+  "prisma/migrations/20261016000000_init/migration.sql": "4598b06c539cd2c5c81e5185121d91369e0ba0767e6d7a61e2fed53742481546",
+  "prisma/migrations/20261016010000_learning/migration.sql": "0f9e52aea3e872000eb6e8892f2e520383cd31529b8a970873586f4f21e4548a",
+  "prisma/migrations/20261016020000_saas/migration.sql": "4d9edf6f8e064be55c78f28bbae59f24ffd5fc35c41386f22d545ce64967d20b",
+  "prisma/migrations/20261016021000_checkout_resume/migration.sql": "89d3352d4058150631cd0b70ef0015ec36cf9d63acb8c034b478ebefa81f17be",
+  "prisma/migrations/20261017010000_free_history/migration.sql": "a2eb1ae39ce6cbcf6cfe0c638da9ec9f551a77fcbee69c8681cfa13e02d45587",
+  "prisma/migrations/20261017011000_task_versions/migration.sql": "78995ff2b3213d4e7fc3f26942eaa6a166957e09deca26f1b9a8101c453c73b0",
+  "prisma/migrations/migration_lock.toml": "1db17a8d051aa136110736752c5e1f8b7ed92b6ea8e803112fbbe2497047c210",
+  "prisma/seed.cjs": "0c8c241856148ad1c4c8386a08f8672719c77d063bc5906899cccb7b230e4a27"
+}

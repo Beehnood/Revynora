@@ -19,7 +19,7 @@ const object = (
 const card = {
   front: { ...text, minLength: 1, maxLength: 1000 },
   back: { ...text, minLength: 1, maxLength: 4000 },
-  courseId: uuid,
+  courseId: { ...uuid, nullable: true },
 };
 const task = {
   title: { ...text, minLength: 1, maxLength: 160 },
@@ -50,11 +50,15 @@ export function completeSaasOpenApi(doc: OpenAPIObject) {
       "back",
       "version",
     ]),
-    "POST /api/v1/leitner/cards/{id}/review": object({
-      requestId: uuid,
-      version,
-      remembered: bool,
-    }),
+    "POST /api/v1/leitner/cards/{id}/review": object(
+      {
+        requestId: uuid,
+        version,
+        remembered: bool,
+        durationSeconds: { type: "integer", minimum: 0, maximum: 3600 },
+      },
+      ["requestId", "version", "remembered"],
+    ),
     "POST /api/v1/study-plans/generate": object(
       {
         title: task.title,
@@ -82,7 +86,19 @@ export function completeSaasOpenApi(doc: OpenAPIObject) {
       enabled: bool,
       timeZone: { ...text, example: "Europe/Paris" },
     }),
-    "PATCH /api/v1/admin/users/{id}": object({ disabled: bool }),
+    "PATCH /api/v1/admin/users/{id}": object({
+      disabled: bool,
+      confirmed: { type: "boolean", enum: [true] },
+      reason: {
+        type: "string",
+        enum: [
+          "SECURITY_REVIEW",
+          "POLICY_REVIEW",
+          "USER_REQUEST",
+          "REVIEW_COMPLETED",
+        ],
+      },
+    }),
     "DELETE /api/v1/privacy/account": object({
       password: { ...text, minLength: 1, maxLength: 128 },
       confirmation: { type: "string", enum: ["SUPPRIMER"] },

@@ -1,0 +1,5 @@
+[Unit]
+Description=Revynora HTTPS readiness probe
+[Service]
+Type=oneshot
+ExecStart=/bin/sh /opt/revynora/infra/production/check-health.sh

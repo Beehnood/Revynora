@@ -1,3 +1,4 @@
+import { completePhase3OpenApi } from "./phase3-openapi";
 import { completeSaasOpenApi } from "./saas-openapi";
 import type {
   OpenAPIObject,
@@ -192,12 +193,17 @@ export function completeOpenApi(doc: OpenAPIObject) {
           name: "X-Revynora-Client",
           in: "header",
           required: true,
-          schema: { type: "string", enum: ["web"] },
+          schema: {
+            type: "string",
+            enum: path.includes("/auth/mobile/")
+              ? ["mobile"]
+              : ["web", "mobile"],
+          },
           description:
-            "Marqueur de requête obligatoire pour la protection CSRF.",
+            "Web : web et origine autorisée. Mobile : mobile sans Origin, avec bearer sauf inscription/connexion natives.",
         });
       }
     }
   }
-  return completeSaasOpenApi(doc);
+  return completePhase3OpenApi(completeSaasOpenApi(doc));
 }

@@ -1,3 +1,4 @@
+import { ProgressModule } from "./progress/progress.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { AdminModule } from "./admin/admin.module";
 import { PrivacyModule } from "./privacy/privacy.module";
@@ -18,6 +19,7 @@ import { LearningModule } from "./learning/learning.module";
     LearningModule,
     LeitnerModule,
     PlanningModule,
+    ProgressModule,
     NotificationsModule,
     AdminModule,
     PrivacyModule,

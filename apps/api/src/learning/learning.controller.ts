@@ -28,7 +28,7 @@ import {
 } from "@revynora/validation";
 import type { SchemaObject } from "@nestjs/swagger/dist/interfaces/open-api-spec.interface";
 import type { AuthRequest } from "../auth/auth.service";
-import { StudentGuard } from "../auth/student.guard";
+import { LearningAccessGuard } from "../auth/learning-access.guard";
 import { parse } from "../shared/http/errors";
 import { LearningService } from "./learning.service";
 import { AiService } from "../ai/ai.service";
@@ -50,7 +50,7 @@ const body = (schema: z.ZodType) => {
   status: 404,
   description: "Ressource inexistante ou appartenant à un autre étudiant",
 })
-@UseGuards(StudentGuard)
+@UseGuards(LearningAccessGuard)
 @Controller()
 export class LearningController {
   constructor(

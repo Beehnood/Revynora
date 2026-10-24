@@ -1,12 +1,16 @@
 import type { PrismaClient, Prisma } from "@prisma/client";
 import { DomainError, missing } from "../../shared/domain/errors";
 import {
+  DEFAULT_LEITNER_INTERVALS,
   scheduleReview,
   type CardRepository,
   type CardInput,
 } from "../domain/leitner";
 export class PrismaCardRepository implements CardRepository {
-  constructor(private readonly db: PrismaClient) {}
+  constructor(
+    private readonly db: PrismaClient,
+    private readonly intervals: readonly number[] = DEFAULT_LEITNER_INTERVALS,
+  ) {}
   async list(userId: string, due: boolean, page: number, pageSize: number) {
     const where = {
       userId,
@@ -27,7 +31,7 @@ export class PrismaCardRepository implements CardRepository {
   private async course(
     tx: Prisma.TransactionClient,
     userId: string,
-    id?: string,
+    id?: string | null,
   ) {
     if (!id) return;
     const c = await tx.course.findFirst({
@@ -75,7 +79,12 @@ export class PrismaCardRepository implements CardRepository {
   review(
     userId: string,
     id: string,
-    input: { requestId: string; version: number; remembered: boolean },
+    input: {
+      requestId: string;
+      version: number;
+      remembered: boolean;
+      durationSeconds?: number;
+    },
   ) {
     return this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "LeitnerCard" WHERE id=${id} AND "userId"=${userId} FOR UPDATE`;
@@ -111,7 +120,12 @@ export class PrismaCardRepository implements CardRepository {
           "NOT_DUE",
           "Cette carte n’est pas encore à revoir.",
         );
-      const next = scheduleReview(card.box, input.remembered, new Date());
+      const next = scheduleReview(
+        card.box,
+        input.remembered,
+        new Date(),
+        this.intervals,
+      );
       await tx.leitnerCard.update({
         where: { id },
         data: {
@@ -127,6 +141,7 @@ export class PrismaCardRepository implements CardRepository {
           courseId: card.courseId,
           requestId: input.requestId,
           remembered: input.remembered,
+          durationSeconds: input.durationSeconds,
           fromBox: card.box,
           ...next,
         },
@@ -151,6 +166,12 @@ export class PrismaCardRepository implements CardRepository {
         take: 20,
       }),
     ]);
-    return { boxes, due, totalReviews: total, recent };
+    return {
+      boxes,
+      due,
+      totalReviews: total,
+      recent,
+      intervals: this.intervals,
+    };
   }
 }

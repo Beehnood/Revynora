@@ -39,6 +39,7 @@
     "eslint": "9.39.1",
     "typescript-eslint": "8.46.2",
     "@types/express": "5.0.5",
-    "@types/nodemailer": "7.0.3"
+    "@types/nodemailer": "7.0.3",
+    "typescript": "5.9.3"
   }
 }

@@ -1,3 +1,4 @@
+import { TaskHistory } from "../components/saas/task-history";
 import { beforeEach, describe, it, expect, vi } from "vitest";
 import {
   render,
@@ -11,7 +12,6 @@ import { LeitnerView } from "../components/saas/leitner-view";
 import { PlanningView } from "../components/saas/planning-view";
 import { NotificationsView } from "../components/saas/notifications-view";
 import { PrivacyControls } from "../components/saas/privacy-controls";
-import { AdminView } from "../components/saas/admin-view";
 import { api } from "../lib/api";
 const m = vi.hoisted(() => ({
   data: new Map<string, unknown>(),
@@ -56,6 +56,48 @@ const card = {
   dueAt: new Date().toISOString(),
 };
 describe("Écrans SaaS", () => {
+  it("charge l’historique à la demande, pagine et permet de réessayer une panne", async () => {
+    vi.mocked(api).mockResolvedValueOnce({
+      items: [
+        {
+          id: "v",
+          version: 1,
+          title: "Séance déplacée",
+          startsAt: "2026-10-20T10:00Z",
+          status: "PLANNED",
+        },
+      ],
+      total: 21,
+      page: 1,
+      pageSize: 20,
+    });
+    render(<TaskHistory itemId="task" timeZone="Europe/Paris" />);
+    expect(api).not.toHaveBeenCalled();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Historique de la séance" }),
+    );
+    await screen.findByText("Version 1 · Séance déplacée");
+    vi.mocked(api).mockRejectedValueOnce(new Error("Hors ligne"));
+    fireEvent.click(screen.getByRole("button", { name: "Version suivante" }));
+    await screen.findByRole("alert");
+    vi.mocked(api).mockResolvedValueOnce({
+      items: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Réessayer" }));
+    await waitFor(() =>
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument(),
+    );
+    fireEvent.click(
+      screen.getByRole("button", { name: "Historique de la séance" }),
+    );
+    expect(
+      screen.queryByLabelText("Versions de la séance"),
+    ).not.toBeInTheDocument();
+  });
+
   it("affiche les offres, reprend un paiement et valide une simulation", async () => {
     m.data.set("/subscriptions/me", {
       plan: "FREE",
@@ -215,6 +257,9 @@ describe("Écrans SaaS", () => {
       screen.getByRole("button", { name: "Revenir à mes cartes" }),
     );
     fireEvent.click(screen.getByRole("button", { name: "Archiver" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: "Confirmer l’archivage" }),
+    );
     await waitFor(() =>
       expect(api).toHaveBeenCalledWith("/leitner/cards/card", {
         method: "DELETE",
@@ -391,72 +436,38 @@ describe("Écrans SaaS", () => {
       "/api/v1/privacy/export",
     );
   });
-  it("admin : filtres, pagination, suspension et distinction des revenus simulés", async () => {
-    m.data.set("/admin/metrics", {
-      users: 42,
-      newUsers: 3,
-      billingMode: "mock",
-      workerEnabled: false,
-      payments: [
-        {
-          provider: "mock",
-          status: "PAID",
-          _sum: { amountCents: 500 },
-          _count: 1,
-        },
-      ],
-      ai: { _count: 2, _sum: { estimatedCostUsd: null } },
-    });
-    m.data.set("/admin/users", {
-      items: [
-        {
-          id: "u",
-          name: "Alice",
-          email: "a@example.test",
-          role: "STUDENT",
-          disabledAt: null,
-        },
-      ],
-      total: 40,
-    });
-    m.data.set("/admin/events", {
-      items: [
-        {
-          id: "event",
-          eventType: "invoice.paid",
-          status: "ACTIVE",
-          createdAt: "2026-10-16",
-        },
-      ],
-      audit: [{ id: "audit", action: "USER_ENABLED", createdAt: "2026-10-16" }],
-      total: 1,
-    });
-    m.data.set("/admin/offers", [
-      { code: "FREE", priceCents: 0, active: true },
-    ]);
-    render(<AdminView />);
-    expect(screen.getByText(/simulation locale/)).toBeVisible();
-    fireEvent.change(screen.getByLabelText("Du"), {
-      target: { value: "2026-10-01" },
-    });
-    fireEvent.change(screen.getByLabelText("Au (exclu)"), {
-      target: { value: "2026-11-01" },
-    });
-    fireEvent.change(screen.getByLabelText("Rechercher par nom ou e-mail"), {
-      target: { value: "Alice" },
-    });
-    fireEvent.click(screen.getByRole("button", { name: "Suivant" }));
-    expect(screen.getByText("Page 2")).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Précédent" }));
-    fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
-    await waitFor(() =>
-      expect(api).toHaveBeenCalledWith(
-        "/admin/users/u",
-        expect.objectContaining({ body: JSON.stringify({ disabled: true }) }),
-      ),
-    );
-    vi.mocked(api).mockRejectedValueOnce(new Error("Refus"));
-    fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
-    await screen.findByRole("alert");
+});
+
+it("présente les droits internes ADMIN sans achat Pro ni commandes de facturation", () => {
+  m.data.set("/learning/access", {
+    allowed: true,
+    commercialPlan: "FREE",
+    effectivePlan: "PRO",
+    source: "INTERNAL",
+    leitner: true,
+    planning: true,
+    internal: { startsAt: "2026-10-21T00:00:00Z", expiresAt: null },
   });
+  render(
+    <BillingView
+      user={{
+        id: "internal-owner",
+        role: "ADMIN",
+        plan: "FREE",
+        name: "Compte interne",
+        email: "owner@example.test",
+        createdAt: "2026-10-21",
+      }}
+    />,
+  );
+  expect(
+    screen.getByRole("heading", { name: "Accès interne · équivalent Pro" }),
+  ).toBeVisible();
+  expect(screen.getByText(/ne constitue pas un achat/)).toHaveTextContent(
+    "Offre commerciale : FREE",
+  );
+  expect(
+    screen.queryByRole("button", { name: /payer|acheter|portail|changer/i }),
+  ).not.toBeInTheDocument();
+  expect(api).not.toHaveBeenCalled();
 });

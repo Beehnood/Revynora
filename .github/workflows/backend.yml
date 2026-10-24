@@ -1,0 +1,72 @@
+name: Backend validation
+on:
+  pull_request:
+    paths:
+      [
+        "apps/api/**",
+        "packages/**",
+        "prisma/**",
+        "infra/production/**",
+        "pnpm-lock.yaml",
+        ".github/workflows/backend.yml",
+      ]
+  push:
+    branches: [main]
+    paths:
+      [
+        "apps/api/**",
+        "packages/**",
+        "prisma/**",
+        "infra/production/**",
+        "pnpm-lock.yaml",
+        ".github/workflows/backend.yml",
+      ]
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  validate:
+    name: backend-validation
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      WORKER_ENABLED: "false"
+      G8_ISOLATED_TEST_DB: "true"
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: revynora
+          POSTGRES_PASSWORD: local_dev_only
+          POSTGRES_DB: revynora
+        ports: ["5433:5432"]
+        options: >-
+          --health-cmd "pg_isready -U revynora -d revynora"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7.4.6-alpine
+        ports: ["6380:6379"]
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm exec turbo typecheck --filter=@revynora/api
+      - run: pnpm --filter @revynora/api lint
+      - run: pnpm test:integration
+      - run: pnpm build:api
+      - run: docker build -f infra/production/Dockerfile.api --target runtime -t revynora-api:ci .
+      - run: docker build -f infra/production/Dockerfile.api --target migration -t revynora-migrate:ci .
+      - name: Verify non-root migration tooling without network access
+        run: docker run --rm --network none --entrypoint pnpm revynora-migrate:ci --version

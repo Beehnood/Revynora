@@ -1,6 +1,6 @@
 import { GetEntitlements } from "../billing/application/billing.use-cases";
 import { Inject, Injectable } from "@nestjs/common";
-import { createHash, randomBytes } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Request, Response } from "express";
 import { DatabaseService } from "../database/database.service";
 import { ApiError } from "../shared/http/errors";
@@ -65,7 +65,7 @@ export class AuthService {
       maxAge,
     });
   }
-  async session(userId: string, response: Response) {
+  async session(userId: string, response: Response, native = false) {
     const token = randomBytes(32).toString("base64url");
     const maxAge = this.env.SESSION_DAYS * 86400000;
     await this.db.client.session.create({
@@ -75,12 +75,16 @@ export class AuthService {
         expiresAt: new Date(Date.now() + maxAge),
       },
     });
+    if (native)
+      return { token, expiresAt: new Date(Date.now() + maxAge).toISOString() };
     this.cookie(response, token, maxAge);
+    return null;
   }
   async register(
     data: { email: string; name: string; password: string },
     request: Request,
     response: Response,
+    native = false,
   ) {
     this.limit(request);
     const passwordHash = await hashPassword(data.password);
@@ -97,6 +101,28 @@ export class AuthService {
             expiresAt: new Date(Date.now() + maxAge),
           },
         },
+        subscriptionPeriods: {
+          create: {
+            subscription: {
+              connectOrCreate: {
+                where: { code: "FREE" },
+                create: {
+                  code: "FREE",
+                  name: "FREE",
+                  priceCents: 0,
+                  interval: "none",
+                },
+              },
+            },
+            provider: "internal",
+            providerSubscriptionId: "free_" + randomUUID(),
+            priceCents: 0,
+            currency: "eur",
+            status: "ACTIVE",
+            startsAt: new Date(),
+            endsAt: new Date("9999-12-31T00:00:00Z"),
+          },
+        },
         termsAcceptedAt: new Date(),
         emails: {
           create: {
@@ -111,6 +137,12 @@ export class AuthService {
       },
       select: publicUser,
     });
+    if (native)
+      return {
+        user,
+        token,
+        expiresAt: new Date(Date.now() + maxAge).toISOString(),
+      };
     this.cookie(response, token, maxAge);
     return user;
   }
@@ -118,6 +150,7 @@ export class AuthService {
     data: { email: string; password: string },
     request: Request,
     response: Response,
+    native = false,
   ) {
     this.limit(request);
     const user = await this.db.client.user.findUnique({
@@ -133,13 +166,27 @@ export class AuthService {
         "AUTH_INVALID",
         "E-mail ou mot de passe incorrect.",
       );
-    await this.session(user.id, response);
-    return this.db.client.user.findUniqueOrThrow({
+    if (native && user.role !== "STUDENT")
+      throw new ApiError(
+        403,
+        "STUDENT_REQUIRED",
+        "L’application mobile est réservée aux étudiants.",
+      );
+    const credentials = await this.session(user.id, response, native);
+    const profile = await this.db.client.user.findUniqueOrThrow({
       where: { id: user.id },
       select: publicUser,
     });
+    return native ? { user: profile, ...credentials } : profile;
   }
   token(request: Request) {
+    // An invalid bearer never falls back to a browser cookie.
+    if (request.headers.authorization !== undefined) {
+      const match = /^Bearer ([a-zA-Z0-9_-]{43})$/.exec(
+        request.headers.authorization,
+      );
+      return match?.[1];
+    }
     const match = request.headers.cookie
       ?.split(";")
       .map((v) => v.trim())
@@ -161,7 +208,7 @@ export class AuthService {
     if (
       !session ||
       session.user.disabledAt ||
-      session.expiresAt.getTime() < Date.now()
+      session.expiresAt.getTime() <= Date.now()
     )
       throw new ApiError(
         401,

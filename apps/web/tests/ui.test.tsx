@@ -20,7 +20,7 @@ import { Button } from "../components/ui/button";
 import { cn } from "../components/ui/utils";
 vi.mock("next/image", () => ({
   default: ({ src, alt, ...p }: React.ImgHTMLAttributes<HTMLImageElement>) => (
-    <img src={src} alt={alt} {...p} />
+    <img src={typeof src === "string" ? src : undefined} alt={alt} {...p} />
   ),
 }));
 describe("Navigation et fondations", () => {

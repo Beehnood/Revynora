@@ -1,0 +1,417 @@
+@import "@revynora/ui/styles.css";
+@source "../components";
+@source "../../../packages/ui/src";
+@source "../modules";
+.admin-menu-toggle {
+  display: none;
+}
+.admin-nav a[aria-current="page"] {
+  background: #ede9fe;
+  color: #4338ca;
+  font-weight: 700;
+  border-radius: 0.6rem;
+}
+.admin-future {
+  font-size: 0.85rem;
+  color: #475569;
+  margin: 1.5rem 0;
+}
+.admin-main {
+  min-width: 0;
+}
+.admin-main dd {
+  margin: 0 0 1rem;
+  overflow-wrap: anywhere;
+}
+.admin-main dt {
+  font-weight: 600;
+}
+@media (max-width: 767px) {
+  .admin-shell {
+    display: block;
+  }
+  .admin-menu-toggle {
+    display: inline-flex;
+    margin: 1rem;
+  }
+  .admin-sidebar {
+    display: none;
+    position: static;
+    width: auto;
+  }
+  .admin-sidebar.is-open {
+    display: block;
+  }
+  .admin-main {
+    padding: 1rem;
+  }
+}
+@media (max-width: 767px) {
+  .admin-sidebar {
+    height: auto;
+  }
+  .admin-sidebar .admin-nav {
+    flex-direction: column;
+    margin-top: 1rem;
+  }
+}
+
+.admin-registration-chart {
+  display: block;
+  width: 100%;
+  height: 13rem;
+  color: var(--primary);
+}
+.admin-main section > .card {
+  margin-block: 1.25rem;
+}
+.admin-main caption {
+  text-align: left;
+  padding-block: 0.75rem;
+}
+.admin-main meter {
+  width: 100%;
+  min-width: 5rem;
+  accent-color: var(--primary);
+}
+.admin-main summary {
+  cursor: pointer;
+  padding-block: 1rem;
+}
+.catalog-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+
+/* G.7: scoped presentation; student styles and business contracts are unchanged. */
+.admin-shell {
+  display: block;
+}
+.admin-sidebar {
+  position: fixed;
+  inset: 0 auto 0 0;
+  width: 216px;
+  height: 100dvh;
+  padding: 28px 16px;
+  z-index: 20;
+}
+.admin-sidebar .admin-nav {
+  margin-block: 32px;
+}
+.admin-main {
+  margin-left: 216px;
+  padding: 32px;
+  max-width: 1640px;
+}
+.admin-main h1 {
+  font-size: clamp(1.65rem, 3vw, 2.2rem);
+  letter-spacing: -0.04em;
+}
+.admin-main section > h2 {
+  font-size: 1.4rem;
+  margin-block: 24px 8px;
+  letter-spacing: -0.025em;
+}
+.admin-main h3 {
+  font-size: 1.05rem;
+  margin-bottom: 8px;
+}
+.admin-main .card {
+  padding: 24px;
+}
+.admin-main .card p {
+  margin-block: 8px;
+  line-height: 1.55;
+}
+.admin-period-label {
+  color: var(--muted);
+  font-size: 0.875rem;
+  margin-top: 12px;
+}
+.admin-kpis {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+  margin-block: 24px;
+}
+.admin-kpis .card {
+  min-width: 0;
+  border-top: 3px solid var(--primary);
+}
+.admin-kpis .badge {
+  white-space: normal;
+  height: auto;
+  line-height: 1.5;
+}
+.admin-main .admin-kpi-value {
+  font-size: 2.25rem;
+  line-height: 1.15;
+  font-weight: 750;
+  color: var(--foreground);
+  margin-block: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.admin-statistics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+.admin-statistics-grid > .card {
+  min-width: 0;
+  margin: 0;
+}
+.admin-statistics-grid > .card:first-child {
+  grid-column: 1 / -1;
+}
+.admin-statistics-grid > .card:last-child {
+  grid-column: 1 / -1;
+}
+.admin-main .admin-chart {
+  margin: 16px 0 0;
+}
+.admin-chart-heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+  font-size: 0.85rem;
+  margin-bottom: 20px;
+}
+.admin-chart-key {
+  display: inline-block;
+  background: var(--primary);
+  width: 10px;
+  height: 10px;
+  border-radius: 3px;
+  margin-right: 6px;
+}
+.admin-chart-plot {
+  display: flex;
+  height: 160px;
+  margin-block: 8px;
+}
+.admin-chart-scale {
+  position: relative;
+  width: 32px;
+  flex-shrink: 0;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+.admin-chart-scale span {
+  position: absolute;
+  transform: translateY(-50%);
+}
+.admin-registration-chart {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  height: 160px;
+  overflow: visible;
+}
+.admin-chart-gridline {
+  stroke: var(--border);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.admin-chart-dates {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+  margin: 14px 0 8px 32px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.admin-chart figcaption {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 12px;
+}
+.admin-explanation {
+  color: var(--muted);
+  font-size: 0.875rem;
+}
+.admin-explanation summary {
+  padding-block: 8px;
+}
+.admin-shortcuts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px 24px;
+  margin-block: 24px;
+}
+.admin-shortcuts a {
+  color: var(--primary);
+  font-weight: 600;
+}
+.admin-secondary {
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: white;
+  padding: 0 20px 16px;
+  margin-top: 24px;
+}
+.admin-secondary > summary {
+  font-weight: 700;
+  padding-block: 16px;
+}
+.admin-secondary:not([open]) {
+  padding-bottom: 0;
+}
+.admin-secondary .saas-row {
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.admin-secondary .saas-row small {
+  overflow-wrap: anywhere;
+}
+.admin-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+.admin-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.admin-filters select {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  width: 100%;
+  color: var(--foreground);
+  font-weight: 400;
+}
+.admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  padding-top: 16px;
+}
+.admin-pagination span {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+.admin-pagination .button {
+  min-height: 44px;
+}
+.admin-offer {
+  padding-block: 10px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+.admin-reference {
+  display: inline-block;
+  max-width: 12ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  font-family: monospace;
+}
+.admin-scroll-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.admin-main .table-scroll {
+  max-width: 100%;
+  border-radius: 8px;
+}
+.admin-main .table-scroll:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.admin-main .admin-table {
+  font-size: 0.875rem;
+}
+.admin-main .admin-table th,
+.admin-main .admin-table td {
+  padding: 12px;
+  line-height: 1.5;
+}
+.admin-main #admin-users .admin-table {
+  min-width: 560px;
+}
+.admin-main .admin-result-count {
+  font-weight: 600;
+}
+@media (min-width: 768px) and (max-width: 1199px) {
+  .admin-kpis {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .admin-kpis > .card:last-child {
+    grid-column: 1 / -1;
+  }
+  .admin-statistics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+@media (min-width: 768px) and (max-width: 1023px) {
+  .admin-sidebar {
+    width: 176px;
+    padding: 24px 12px;
+  }
+  .admin-main {
+    margin-left: 176px;
+    padding: 24px;
+  }
+  .admin-sidebar .brand {
+    max-width: 100%;
+  }
+}
+@media (max-width: 767px) {
+  .admin-sidebar {
+    position: static;
+    width: auto;
+    height: auto;
+  }
+  .admin-main {
+    margin-left: 0;
+    padding: 16px;
+  }
+  .admin-main .card {
+    padding: 20px;
+  }
+  .admin-kpis,
+  .admin-statistics-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .admin-kpis {
+    gap: 12px;
+  }
+  .admin-kpis .card {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 4px 12px;
+  }
+  .admin-kpis .card p:not(.admin-kpi-value) {
+    grid-column: 1 / -1;
+  }
+  .admin-kpis .card .admin-kpi-value {
+    margin: 0;
+  }
+  .admin-filters {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 16px;
+  }
+  .admin-pagination {
+    justify-content: space-between;
+    gap: 8px;
+  }
+  .admin-pagination span {
+    order: -1;
+    width: 100%;
+    text-align: center;
+  }
+  .admin-chart-dates {
+    font-size: 0.75rem;
+  }
+}

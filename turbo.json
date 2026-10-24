@@ -2,7 +2,7 @@
   "tasks": {
     "build": {
       "dependsOn": ["^build"],
-      "outputs": [".next/**", "!.next/cache/**", "dist/**"]
+      "outputs": [".next/**", "!.next/cache/**", "dist/**", ".expo/**"]
     },
     "dev": {
       "cache": false,
@@ -20,7 +20,41 @@
       "outputs": ["coverage/**"],
       "dependsOn": ["^build"],
       "cache": false,
-      "passThroughEnv": ["DATABASE_URL", "TEST_DATABASE_URL"]
+      "passThroughEnv": [
+        "DATABASE_URL",
+        "TEST_DATABASE_URL",
+        "G8_ISOLATED_TEST_DB"
+      ]
     }
-  }
+  },
+  "globalEnv": [
+    "API_URL",
+    "VERCEL",
+    "VERCEL_ENV",
+    "WEB_ORIGIN",
+    "ADMIN_ORIGIN",
+    "NEXT_PUBLIC_WEB_ORIGIN",
+    "EXPO_PUBLIC_API_URL",
+    "NODE_ENV"
+  ],
+  "globalPassThroughEnv": [
+    "DATABASE_URL",
+    "TEST_DATABASE_URL",
+    "G8_ISOLATED_TEST_DB",
+    "PORT",
+    "HOST",
+    "TRUST_PROXY_HOPS",
+    "AI_*",
+    "OPENAI_*",
+    "BILLING_PROVIDER",
+    "STRIPE_*",
+    "COOKIE_SECURE",
+    "SESSION_DAYS",
+    "MAIL_*",
+    "SMTP_*",
+    "WORKER_ENABLED",
+    "QUEUE_NAME",
+    "REDIS_URL",
+    "LEITNER_INTERVAL_DAYS"
+  ]
 }

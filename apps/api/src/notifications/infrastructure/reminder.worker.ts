@@ -8,7 +8,7 @@ import { Queue, Worker } from "bullmq";
 import Redis from "ioredis";
 import nodemailer from "nodemailer";
 import { DatabaseService } from "../../database/database.service";
-import { GetEntitlements } from "../../billing/application/billing.use-cases";
+import { GetLearningAccess } from "../../learning-access/application/learning-access";
 @Injectable()
 export class ReminderWorker implements OnModuleInit, OnModuleDestroy {
   private queue?: Queue;
@@ -18,7 +18,7 @@ export class ReminderWorker implements OnModuleInit, OnModuleDestroy {
   private scanning = false;
   constructor(
     @Inject(DatabaseService) private readonly db: DatabaseService,
-    @Inject(GetEntitlements) private readonly access: GetEntitlements,
+    @Inject(GetLearningAccess) private readonly access: GetLearningAccess,
   ) {}
   async onModuleInit() {
     if (process.env.WORKER_ENABLED === "false") return;

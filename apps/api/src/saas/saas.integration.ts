@@ -1,6 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- HTTP assertions inspect heterogeneous JSON responses. */
 import "reflect-metadata";
-import { beforeAll, afterAll, describe, it, expect } from "vitest";
+import { beforeAll, afterAll, describe, it, expect, vi } from "vitest";
+import { Logger } from "@nestjs/common";
+import { readStatistics } from "../admin/infrastructure/statistics.repository";
+import { PrismaAdminRepository } from "../admin/infrastructure/admin.repository";
+import { decodeAccessAudit } from "../admin/domain/audit";
 import { Test } from "@nestjs/testing";
 import type { INestApplication } from "@nestjs/common";
 import { PrismaClient } from "@prisma/client";
@@ -102,6 +106,9 @@ afterAll(async () => {
     await db.reminderDelivery.deleteMany({
       where: { itemId: { in: plans.map((x) => x.id) } },
     });
+    await db.auditLog.deleteMany({
+      where: { OR: [{ actorId: { in: ids } }, { targetUserId: { in: ids } }] },
+    });
     await db.user.deleteMany({ where: { id: { in: ids } } });
     await db.mockBillingRecord.deleteMany({
       where: { snapshot: { path: ["userId"], equals: a?.id ?? "" } },
@@ -111,6 +118,718 @@ afterAll(async () => {
   await app?.close();
 });
 describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () => {
+  it("G2: la fiche est réservée aux administrateurs et ne divulgue que les champs autorisés", async () => {
+    const student = await register("g2-student");
+    const manager = await register("g2-admin");
+    await db.user.update({
+      where: { id: manager.id },
+      data: { role: "ADMIN" },
+    });
+    expect((await req("/admin/users/" + student.id)).status).toBe(401);
+    expect(
+      (
+        await req(
+          "/admin/users/" + student.id,
+          "GET",
+          undefined,
+          student.cookie,
+        )
+      ).status,
+    ).toBe(403);
+    const detail = await req(
+      "/admin/users/" + student.id,
+      "GET",
+      undefined,
+      manager.cookie,
+    );
+    expect(detail.status).toBe(200);
+    expect(Object.keys(detail.data).sort()).toEqual(
+      ["id", "name", "email", "role", "disabledAt", "createdAt"].sort(),
+    );
+    expect(detail.data.id).toBe(student.id);
+    expect(
+      (await req("/admin/users/invalid", "GET", undefined, manager.cookie))
+        .status,
+    ).toBe(400);
+    expect(
+      (
+        await req(
+          "/admin/users/" + crypto.randomUUID(),
+          "GET",
+          undefined,
+          manager.cookie,
+        )
+      ).status,
+    ).toBe(404);
+  });
+  it("G3: agrégats privés exacts, jours UTC, devises et simulations séparés", async () => {
+    const u = await register("g3-statistics");
+    const end = await register("g3-end-boundary");
+    await db.user.update({
+      where: { id: u.id },
+      data: { createdAt: new Date("2051-01-01T00:00:00Z") },
+    });
+    await db.user.update({
+      where: { id: end.id },
+      data: { createdAt: new Date("2051-01-04T00:00:00Z") },
+    });
+    const offer = await db.subscription.findUniqueOrThrow({
+      where: { code: "PLUS" },
+    });
+    await db.userSubscriptionHistory.create({
+      data: {
+        userId: u.id,
+        subscriptionId: offer.id,
+        provider: "mock",
+        providerSubscriptionId: crypto.randomUUID(),
+        priceCents: 250,
+        currency: "eur",
+        status: "CANCELLED",
+        startsAt: new Date("2051-01-02"),
+        endsAt: new Date("2051-02-02"),
+      },
+    });
+    await db.aIUsage.createMany({
+      data: [
+        {
+          userId: u.id,
+          provider: "mock",
+          status: "SUCCESS",
+          createdAt: new Date("2051-01-01"),
+          estimatedCostUsd: null,
+        },
+        {
+          userId: u.id,
+          provider: "openai",
+          status: "ERROR",
+          createdAt: new Date("2051-01-03T23:59:59Z"),
+          inputTokens: 23,
+          outputTokens: 5,
+          estimatedCostUsd: "0.00012345",
+        },
+        {
+          userId: u.id,
+          provider: "openai",
+          status: "SUCCESS",
+          createdAt: new Date("2051-01-04"),
+          estimatedCostUsd: "99",
+        },
+      ],
+    });
+    try {
+      for (const [provider, currency, amountCents, status] of [
+        ["mock", "eur", 250, "PAID"],
+        ["stripe", "eur", 500, "PAID"],
+        ["stripe", "usd", 700, "PAID"],
+        ["stripe", "eur", 100, "FAILED"],
+      ] as const)
+        await db.payment.create({
+          data: {
+            userId: u.id,
+            provider,
+            currency,
+            amountCents,
+            status,
+            providerReference: crypto.randomUUID(),
+            createdAt: new Date("2051-01-02"),
+          },
+        });
+      const path = "/admin/statistics?from=2051-01-01&to=2051-01-04";
+      expect((await req(path)).status).toBe(401);
+      expect((await req(path, "GET", undefined, u.cookie)).status).toBe(403);
+      const r = await req(path, "GET", undefined, admin.cookie);
+      expect(r.status).toBe(200);
+      expect(r.data.registrations).toEqual([
+        { date: "2051-01-01", count: 1 },
+        { date: "2051-01-02", count: 0 },
+        { date: "2051-01-03", count: 0 },
+      ]);
+      expect(r.data.subscriptions).toEqual([
+        { offer: "PLUS", status: "CANCELLED", periods: 1 },
+      ]);
+      expect(r.data.ai).toEqual([
+        {
+          provider: "mock",
+          status: "SUCCESS",
+          requests: 1,
+          inputTokens: "0",
+          outputTokens: "0",
+          estimatedCostUsd: null,
+          estimatedRequests: 0,
+        },
+        {
+          provider: "openai",
+          status: "ERROR",
+          requests: 1,
+          inputTokens: "23",
+          outputTokens: "5",
+          estimatedCostUsd: "0.00012345",
+          estimatedRequests: 1,
+        },
+      ]);
+      expect(r.data.payments).toHaveLength(4);
+      expect(r.data.payments).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            provider: "mock",
+            environment: "SIMULATION",
+            currency: "eur",
+            amountCents: "250",
+          }),
+          expect.objectContaining({
+            provider: "stripe",
+            environment: "UNVERIFIED",
+            currency: "usd",
+            amountCents: "700",
+          }),
+          expect.objectContaining({
+            provider: "stripe",
+            status: "FAILED",
+            amountCents: "100",
+          }),
+        ]),
+      );
+      const shiftedSession = {
+        $transaction: async <T>(
+          work: (
+            tx: import("@prisma/client").Prisma.TransactionClient,
+          ) => Promise<T>,
+          options?: {
+            isolationLevel?: import("@prisma/client").Prisma.TransactionIsolationLevel;
+            maxWait?: number;
+            timeout?: number;
+          },
+        ) =>
+          db.$transaction(async (tx) => {
+            await tx.$executeRaw`SET LOCAL TIME ZONE 'Pacific/Auckland'`;
+            return work(tx);
+          }, options),
+      } as unknown as PrismaClient;
+      const shifted = await readStatistics(shiftedSession, {
+        from: new Date("2051-01-01"),
+        to: new Date("2051-01-04"),
+      });
+      expect(shifted).toEqual(r.data);
+      expect(r.data.billedAiCostUsd).toBeNull();
+      expect(JSON.stringify(r.data)).not.toContain(u.id);
+      const empty = await req(
+        "/admin/statistics?from=2052-01-01&to=2052-01-02",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(empty.data.ai).toEqual([]);
+      expect(empty.data.payments).toEqual([]);
+      expect(empty.data.registrations).toEqual([
+        { date: "2052-01-01", count: 0 },
+      ]);
+      for (const query of [
+        "from=2051-01-01&to=2053-01-01",
+        "from=2051-01-02&to=2051-01-01",
+        "from=bad&to=2051-01-01",
+        "from=2051-01-01&to=2051-01-02&userId=" + u.id,
+      ])
+        expect(
+          (
+            await req(
+              "/admin/statistics?" + query,
+              "GET",
+              undefined,
+              admin.cookie,
+            )
+          ).status,
+        ).toBe(400);
+    } finally {
+      await db.payment.deleteMany({ where: { userId: u.id } });
+    }
+  });
+  it("G4: catalogue strictement global, pagination, recherche littérale et contenu borné", async () => {
+    const tag = "g4-" + crypto.randomUUID();
+    const courseIds = Array.from({ length: 31 }, () => crypto.randomUUID());
+    const common = {
+      domain: "Sciences",
+      content: "Texte du catalogue",
+      createdAt: new Date("2025-01-01"),
+    };
+    try {
+      await db.course.createMany({
+        data: [
+          ...courseIds.slice(0, 23).map((id, i) => ({
+            ...common,
+            id,
+            title: tag + " Titre " + i.toString().padStart(2, "0"),
+            source: "ADMIN" as const,
+            ownerId: null,
+          })),
+          {
+            ...common,
+            id: courseIds[23]!,
+            title: tag + " 100%_",
+            domain: "Matière " + tag,
+            source: "ADMIN",
+            ownerId: null,
+          },
+          {
+            ...common,
+            id: courseIds[24]!,
+            title: tag + " Privé",
+            source: "USER",
+            ownerId: a.id,
+          },
+          {
+            ...common,
+            id: courseIds[25]!,
+            title: tag + " IA privée",
+            source: "AI",
+            ownerId: a.id,
+          },
+          {
+            ...common,
+            id: courseIds[26]!,
+            title: tag + " ADMIN propriétaire",
+            source: "ADMIN",
+            ownerId: a.id,
+          },
+          {
+            ...common,
+            id: courseIds[29]!,
+            title: "Contenu excessif",
+            content: "x".repeat(10001),
+            source: "ADMIN",
+            ownerId: null,
+          },
+          {
+            ...common,
+            id: courseIds[30]!,
+            title: "T".repeat(161),
+            source: "ADMIN",
+            ownerId: null,
+          },
+        ],
+      });
+      for (const [i, source] of [
+        [27, "USER"],
+        [28, "AI"],
+      ] as const)
+        await expect(
+          db.course.create({
+            data: {
+              ...common,
+              id: courseIds[i]!,
+              title: tag + " Sans propriétaire",
+              source,
+              ownerId: null,
+            },
+          }),
+        ).rejects.toThrow();
+      const path = "/admin/catalog/courses";
+      expect((await req(path)).status).toBe(401);
+      expect((await req(path, "GET", undefined, a.cookie)).status).toBe(403);
+      expect((await req(path + "/" + courseIds[0])).status).toBe(401);
+      expect(
+        (await req(path + "/" + courseIds[0], "GET", undefined, a.cookie))
+          .status,
+      ).toBe(403);
+      const first = await req(
+        path + "?search=" + tag.toUpperCase(),
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(first.status).toBe(200);
+      expect(first.data.total).toBe(24);
+      expect(first.data.items).toHaveLength(20);
+      expect(first.data.pageSize).toBe(20);
+      const second = await req(
+        path + "?search=" + tag + "&page=2",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(second.data.items).toHaveLength(4);
+      const all = [...first.data.items, ...second.data.items];
+      expect(new Set(all.map((r: { id: string }) => r.id)).size).toBe(24);
+      for (const row of all) {
+        expect(Object.keys(row).sort()).toEqual(
+          ["id", "title", "domain", "source", "createdAt"].sort(),
+        );
+        expect(row.source).toBe("ADMIN");
+      }
+      expect(JSON.stringify(all)).not.toContain("Privé");
+      const literal = await req(
+        path + "?search=" + encodeURIComponent(tag + " 100%_"),
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(literal.status).toBe(200);
+      expect(literal.data.total).toBe(1);
+      const subject = await req(
+        path + "?search=" + encodeURIComponent("MATIÈRE " + tag),
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(subject.status).toBe(200);
+      expect(subject.data.total).toBe(1);
+      expect(
+        (
+          await req(
+            path + "?search=" + "T".repeat(100),
+            "GET",
+            undefined,
+            admin.cookie,
+          )
+        ).status,
+      ).toBe(422);
+      const detail = await req(
+        path + "/" + courseIds[0],
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(detail.status).toBe(200);
+      expect(Object.keys(detail.data).sort()).toEqual(
+        ["id", "title", "domain", "source", "createdAt", "content"].sort(),
+      );
+      expect(detail.data.content).toBe(common.content);
+      for (const id of [...courseIds.slice(24, 29), crypto.randomUUID()])
+        expect(
+          (await req(path + "/" + id, "GET", undefined, admin.cookie)).status,
+        ).toBe(404);
+      expect(
+        (await req(path + "/" + courseIds[29], "GET", undefined, admin.cookie))
+          .status,
+      ).toBe(422);
+      expect(
+        (await req(path + "/" + courseIds[30], "GET", undefined, admin.cookie))
+          .status,
+      ).toBe(422);
+      expect(
+        (await req(path + "/invalid", "GET", undefined, admin.cookie)).status,
+      ).toBe(400);
+      for (const query of [
+        "page=0",
+        "page=10001",
+        "search=" + "x".repeat(101),
+        "source=USER",
+        "ownerId=" + a.id,
+        "pageSize=100",
+      ])
+        expect(
+          (await req(path + "?" + query, "GET", undefined, admin.cookie))
+            .status,
+        ).toBe(400);
+      const empty = await req(
+        path + "?search=" + tag + "&page=3",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(empty.data.items).toEqual([]);
+      expect(empty.data.total).toBe(24);
+      expect(
+        (
+          await req(
+            path + "?search=" + crypto.randomUUID(),
+            "GET",
+            undefined,
+            admin.cookie,
+          )
+        ).data.total,
+      ).toBe(0);
+      for (const method of ["POST", "PATCH", "DELETE"])
+        expect(
+          (
+            await req(
+              path + "/" + courseIds[0],
+              method,
+              undefined,
+              admin.cookie,
+            )
+          ).status,
+        ).toBe(404);
+      expect(
+        (await req("/courses", "GET", undefined, admin.cookie)).status,
+      ).toBe(403);
+      expect(
+        (
+          await req(
+            "/courses",
+            "POST",
+            {
+              title: "Faux catalogue",
+              domain: "Sciences",
+              content: "Texte privé",
+              source: "ADMIN",
+              ownerId: null,
+            },
+            a.cookie,
+          )
+        ).status,
+      ).toBe(400);
+    } finally {
+      await db.course.deleteMany({ where: { id: { in: courseIds } } });
+    }
+  });
+  it("G4: bornes SQL/UTF-16 exactes, erreur explicite sans page partielle ni fuite privée", async () => {
+    const id = crypto.randomUUID();
+    const privateId = crypto.randomUUID();
+    const tag = "unicode-" + crypto.randomUUID();
+    const path = "/admin/catalog/courses";
+    const read = (suffix: string) =>
+      req(path + suffix, "GET", undefined, admin.cookie);
+    try {
+      await db.course.create({
+        data: {
+          id,
+          source: "ADMIN",
+          ownerId: null,
+          title: tag,
+          domain: "Sciences",
+          content: "Texte",
+        },
+      });
+      await db.course.create({
+        data: {
+          id: privateId,
+          source: "USER",
+          ownerId: a.id,
+          title: tag,
+          domain: "x".repeat(81),
+          content: "PRIVE-UNICODE",
+        },
+      });
+      for (const [field, limit] of [
+        ["title", 160],
+        ["domain", 80],
+        ["content", 10000],
+      ] as const) {
+        for (const unit of ["a", "😀", "𐐀", "e\u0301"]) {
+          const exact = unit.repeat(limit / unit.length);
+          await db.course.update({
+            where: { id },
+            data: {
+              title: tag,
+              domain: "Sciences",
+              content: "Texte",
+              [field]: exact,
+            },
+          });
+          const detail = await read("/" + id);
+          expect(detail.status).toBe(200);
+          expect(detail.data[field]).toBe(exact);
+          const search = field === "title" ? unit : tag;
+          const list = await read("?search=" + encodeURIComponent(search));
+          expect(list.status).toBe(200);
+          expect(
+            list.data.items.some((row: { id: string }) => row.id === id),
+          ).toBe(true);
+          await db.course.update({
+            where: { id },
+            data: { [field]: exact + "a" },
+          });
+          const excessive = await read("/" + id);
+          expect(excessive.status).toBe(422);
+          expect(JSON.stringify(excessive.data)).toContain(
+            "limites de consultation",
+          );
+          const page = await read("?search=" + encodeURIComponent(search));
+          if (field === "content") expect(page.status).toBe(200);
+          else {
+            expect(page.status).toBe(422);
+            expect(page.data.items).toBeUndefined();
+            expect(JSON.stringify(page.data)).toContain(
+              "limites de consultation",
+            );
+          }
+          const hidden = await read("/" + privateId);
+          expect(hidden.status).toBe(404);
+          expect(JSON.stringify(hidden.data)).not.toContain("PRIVE-UNICODE");
+        }
+      }
+    } finally {
+      await db.course.deleteMany({ where: { id: { in: [id, privateId] } } });
+    }
+  });
+  it("G5: supervision agrégée bornée, confidentialité et permissions", async () => {
+    const planId = crypto.randomUUID(),
+      itemId = crypto.randomUUID(),
+      cardId = crypto.randomUUID();
+    const reminderIds = [
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+      crypto.randomUUID(),
+    ];
+    const from = new Date("2057-01-01"),
+      to = new Date("2057-01-03");
+    const path = "/admin/supervision?from=2057-01-01&to=2057-01-03";
+    try {
+      await db.leitnerCard.create({
+        data: {
+          id: cardId,
+          userId: a.id,
+          front: "SECRET-FRONT-G5",
+          back: "SECRET-BACK-G5",
+        },
+      });
+      await db.revision.createMany({
+        data: [from, to].map((createdAt) => ({
+          userId: a.id,
+          cardId,
+          requestId: crypto.randomUUID(),
+          remembered: true,
+          fromBox: 1,
+          toBox: 2,
+          nextDueAt: to,
+          createdAt,
+        })),
+      });
+      await db.studyPlan.create({
+        data: {
+          id: planId,
+          userId: a.id,
+          title: "SECRET-PLAN-G5",
+          timeZone: "Europe/Paris",
+          createdAt: from,
+        },
+      });
+      await db.studyPlanItem.create({
+        data: {
+          id: itemId,
+          planId,
+          title: "SECRET-ITEM-G5",
+          startsAt: from,
+          endsAt: to,
+          createdAt: from,
+          status: "DONE",
+        },
+      });
+      await db.reminderDelivery.createMany({
+        data: [
+          {
+            id: reminderIds[0]!,
+            itemId,
+            version: 1,
+            dueAt: from,
+            status: "SENT",
+          },
+          {
+            id: reminderIds[1]!,
+            itemId,
+            version: 2,
+            dueAt: to,
+            status: "PENDING",
+          },
+          {
+            id: reminderIds[2]!,
+            itemId: crypto.randomUUID(),
+            version: 1,
+            dueAt: from,
+            status: "PRIVATE-STATUS",
+          },
+        ],
+      });
+      expect((await req(path)).status).toBe(401);
+      expect((await req(path, "GET", undefined, a.cookie)).status).toBe(403);
+      const result = await req(path, "GET", undefined, admin.cookie);
+      expect(result.status).toBe(200);
+      expect(result.data).toEqual({
+        from: from.toISOString(),
+        to: to.toISOString(),
+        timeZone: "UTC",
+        rows: [
+          { category: "ITEMS", status: "DONE", count: 1 },
+          { category: "PLANS", status: "CREATED", count: 1 },
+          { category: "REMINDERS", status: "SENT", count: 1 },
+          { category: "REVIEWS", status: "RECORDED", count: 1 },
+        ],
+      });
+      await db.reminderDelivery.update({
+        where: { id: reminderIds[0] },
+        data: { status: "PRIVATE-STATUS" },
+      });
+      const unknown = await req(path, "GET", undefined, admin.cookie);
+      expect(unknown.data.rows).toContainEqual({
+        category: "REMINDERS",
+        status: "OTHER",
+        count: 1,
+      });
+      const body = JSON.stringify(unknown.data);
+      for (const value of [
+        a.id,
+        cardId,
+        planId,
+        itemId,
+        "SECRET",
+        "PRIVATE-STATUS",
+        "remembered",
+        "startsAt",
+      ])
+        expect(body).not.toContain(value);
+      const empty = await req(
+        "/admin/supervision?from=2058-01-01&to=2058-01-02",
+        "GET",
+        undefined,
+        admin.cookie,
+      );
+      expect(empty.data.rows).toEqual([
+        { category: "PLANS", status: "CREATED", count: 0 },
+        { category: "REVIEWS", status: "RECORDED", count: 0 },
+      ]);
+      for (const query of [
+        "",
+        "from=bad&to=2057-01-03",
+        "from=2057-01-03&to=2057-01-01",
+        "from=2057-01-01&to=2059-01-01",
+        "from=2057-01-01&to=2057-01-03&userId=" + a.id,
+      ])
+        expect(
+          (
+            await req(
+              "/admin/supervision?" + query,
+              "GET",
+              undefined,
+              admin.cookie,
+            )
+          ).status,
+        ).toBe(400);
+      expect(
+        (
+          await req(
+            "/admin/supervision/" + itemId,
+            "GET",
+            undefined,
+            admin.cookie,
+          )
+        ).status,
+      ).toBe(404);
+      expect(
+        (await req("/admin/supervision", "POST", {}, admin.cookie)).status,
+      ).toBe(404);
+    } finally {
+      await db.reminderDelivery.deleteMany({
+        where: { id: { in: reminderIds } },
+      });
+      await db.studyPlan.deleteMany({ where: { id: planId } });
+      await db.leitnerCard.deleteMany({ where: { id: cardId } });
+    }
+  });
+  it("inscription atomique avec historique FREE sans paiement", async () => {
+    const history = (
+      await req("/subscriptions/history", "GET", undefined, a.cookie)
+    ).data;
+    expect(history.total).toBe(1);
+    expect(history.items[0]).toMatchObject({
+      provider: "internal",
+      priceCents: 0,
+      subscription: { code: "FREE" },
+    });
+    expect(await db.payment.count({ where: { userId: a.id } })).toBe(0);
+    expect(
+      (await req("/subscriptions/me", "GET", undefined, a.cookie)).data.period,
+    ).toBeNull();
+  });
   it("refuse les accès payants Free, les rôles et les payloads forgés", async () => {
     const contract = (await req("/openapi.json")).data;
     const webhookDoc = contract.paths["/api/v1/webhooks/stripe"].post;
@@ -244,7 +963,7 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
     expect(
       (await req("/subscriptions/history", "GET", undefined, b.cookie)).data
         .total,
-    ).toBe(2);
+    ).toBe(3);
     expect(
       (await req("/billing/portal-session", "POST", {}, b.cookie)).data.url,
     ).toContain("/app/abonnement");
@@ -436,6 +1155,87 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
       ).status,
     ).toBe(400);
   });
+  it("conserve les versions d’une tâche, refuse le passé et protège leur propriété", async () => {
+    const item = await db.studyPlanItem.findFirstOrThrow({
+      where: { plan: { userId: a.id }, status: "PLANNED" },
+    });
+    const oldDue = await db.reminderDelivery.findFirstOrThrow({
+      where: { itemId: item.id, status: "PENDING" },
+    });
+    const nextDay = new Date(Date.now() + 10 * 86400000)
+      .toISOString()
+      .slice(0, 10);
+    const changed = await req(
+      "/study-plan-items/" + item.id,
+      "PATCH",
+      {
+        version: item.version,
+        title: "Séance reportée",
+        localStart: nextDay + "T12:00",
+      },
+      a.cookie,
+    );
+    expect(changed.status).toBe(200);
+    const history = await req(
+      "/study-plan-items/" + item.id + "/history",
+      "GET",
+      undefined,
+      a.cookie,
+    );
+    expect(history.status).toBe(200);
+    expect(history.data.items.map((v: any) => v.version)).toEqual([1, 0]);
+    expect(history.data.items[1].startsAt).toBe(item.startsAt.toISOString());
+    expect(
+      (
+        await db.reminderDelivery.findUniqueOrThrow({
+          where: { id: oldDue.id },
+        })
+      ).status,
+    ).toBe("CANCELLED");
+    expect(
+      await db.reminderDelivery.count({
+        where: { itemId: item.id, status: "PENDING" },
+      }),
+    ).toBe(1);
+    expect(
+      (
+        await req(
+          "/study-plan-items/" + item.id,
+          "PATCH",
+          { version: 1, localStart: "2020-01-01T12:00" },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    expect(
+      (
+        await req(
+          "/study-plan-items/" + item.id + "/history?page=0",
+          "GET",
+          undefined,
+          a.cookie,
+        )
+      ).status,
+    ).toBe(400);
+    const c = await register("Charlie");
+    await paid(c);
+    expect(
+      (
+        await req(
+          "/study-plan-items/" + item.id + "/history",
+          "GET",
+          undefined,
+          c.cookie,
+        )
+      ).status,
+    ).toBe(404);
+    await expect(
+      db.studyPlanItemVersion.update({
+        where: { itemId_version: { itemId: item.id, version: 0 } },
+        data: { title: "Modification interdite" },
+      }),
+    ).rejects.toThrow();
+  });
   it("rappels : opt-in Pro, retrait possible et vérification à la livraison", async () => {
     expect(
       (await req("/notifications/preferences", "GET", undefined, a.cookie)).data
@@ -583,7 +1383,7 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
     const webhook = app.get(ProcessBillingWebhook);
     const old = await provider.cancel(b.id);
     const prior = await db.userSubscriptionHistory.findFirstOrThrow({
-      where: { userId: b.id, status: "ACTIVE" },
+      where: { userId: b.id, status: "ACTIVE", provider: "mock" },
     });
     const source = await db.mockBillingRecord.findUniqueOrThrow({
       where: { id: prior.providerSubscriptionId },
@@ -683,12 +1483,45 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         )
       ).status,
     ).toBe(400);
+    const before = await db.auditLog.count({ where: { targetUserId: b.id } });
+    for (const body of [
+      { disabled: true },
+      { disabled: true, confirmed: false, reason: "SECURITY_REVIEW" },
+      {
+        disabled: true,
+        confirmed: true,
+        reason: "personal email@example.test",
+      },
+    ]) {
+      expect(
+        (await req("/admin/users/" + b.id, "PATCH", body, admin.cookie)).status,
+      ).toBe(400);
+    }
+    expect(await db.auditLog.count({ where: { targetUserId: b.id } })).toBe(
+      before,
+    );
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: b.id } })).disabledAt,
+    ).toBeNull();
+    expect((await req("/users/me", "GET", undefined, b.cookie)).status).toBe(
+      200,
+    );
+    expect(
+      (
+        await req(
+          "/admin/users/" + b.id,
+          "PATCH",
+          { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
+          a.cookie,
+        )
+      ).status,
+    ).toBe(403);
     expect(
       (
         await req(
           "/admin/users/" + admin.id,
           "PATCH",
-          { disabled: true },
+          { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
           admin.cookie,
         )
       ).status,
@@ -698,11 +1531,25 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         await req(
           "/admin/users/" + b.id,
           "PATCH",
-          { disabled: true },
+          { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
           admin.cookie,
         )
       ).status,
     ).toBe(200);
+    const audit = await req("/admin/events", "GET", undefined, admin.cookie);
+    expect(audit.data.audit).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          actorId: admin.id,
+          targetUserId: b.id,
+          action: "USER_DISABLED",
+          reason: "SECURITY_REVIEW",
+          result: "SUCCESS",
+        }),
+        expect.objectContaining({ targetUserId: admin.id, result: "REJECTED" }),
+      ]),
+    );
+    expect(JSON.stringify(audit.data.audit)).not.toContain("passwordHash");
     expect((await req("/users/me", "GET", undefined, b.cookie)).status).toBe(
       401,
     );
@@ -711,11 +1558,102 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
         await req(
           "/admin/users/" + b.id,
           "PATCH",
-          { disabled: false },
+          { disabled: false, confirmed: true, reason: "REVIEW_COMPLETED" },
           admin.cookie,
         )
       ).status,
     ).toBe(200);
+  });
+  it("sérialise deux suspensions concurrentes, conserve les deux auteurs et ne restaure aucune session", async () => {
+    const target = await register("ConcurrentTarget");
+    const second = await register("ConcurrentAdmin");
+    await db.user.update({ where: { id: second.id }, data: { role: "ADMIN" } });
+    const results = await Promise.all([
+      req(
+        "/admin/users/" + target.id,
+        "PATCH",
+        { disabled: true, confirmed: true, reason: "SECURITY_REVIEW" },
+        admin.cookie,
+      ),
+      req(
+        "/admin/users/" + target.id,
+        "PATCH",
+        { disabled: true, confirmed: true, reason: "POLICY_REVIEW" },
+        second.cookie,
+      ),
+    ]);
+    expect(results.map((r) => r.status)).toEqual([200, 200]);
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: target.id } }))
+        .disabledAt,
+    ).not.toBeNull();
+    expect(await db.session.count({ where: { userId: target.id } })).toBe(0);
+    const rows = await db.auditLog.findMany({
+      where: { targetUserId: target.id },
+    });
+    expect(rows).toHaveLength(2);
+    expect(new Set(rows.map((r) => r.actorId))).toEqual(
+      new Set([admin.id, second.id]),
+    );
+    expect(rows.map((r) => decodeAccessAudit(r.action))).toEqual(
+      expect.arrayContaining([
+        {
+          action: "USER_DISABLED",
+          reason: "SECURITY_REVIEW",
+          result: "SUCCESS",
+        },
+        { action: "USER_DISABLED", reason: "POLICY_REVIEW", result: "SUCCESS" },
+      ]),
+    );
+    expect(
+      (await req("/users/me", "GET", undefined, target.cookie)).status,
+    ).toBe(401);
+    expect(
+      (
+        await req(
+          "/admin/users/" + target.id,
+          "PATCH",
+          { disabled: false, confirmed: true, reason: "REVIEW_COMPLETED" },
+          admin.cookie,
+        )
+      ).status,
+    ).toBe(200);
+    expect(
+      (await db.user.findUniqueOrThrow({ where: { id: target.id } }))
+        .disabledAt,
+    ).toBeNull();
+    expect(
+      (await req("/users/me", "GET", undefined, target.cookie)).status,
+    ).toBe(401);
+  });
+  it("rollback réel : l’échec de l’audit atomique ne suspend pas le compte ni ne révoque sa session", async () => {
+    const target = await register("AuditRollback");
+    const log = vi
+      .spyOn(Logger.prototype, "error")
+      .mockImplementation(() => {});
+    try {
+      // A nonexistent actor forces the audit foreign-key constraint to fail, without changing the schema.
+      await expect(
+        new PrismaAdminRepository(db).disable(crypto.randomUUID(), target.id, {
+          disabled: true,
+          confirmed: true,
+          reason: "SECURITY_REVIEW",
+        }),
+      ).rejects.toMatchObject({ code: "P2003" });
+      expect(log).toHaveBeenCalledOnce();
+      expect(
+        (await db.user.findUniqueOrThrow({ where: { id: target.id } }))
+          .disabledAt,
+      ).toBeNull();
+      expect(
+        (await req("/users/me", "GET", undefined, target.cookie)).status,
+      ).toBe(200);
+      expect(
+        await db.auditLog.count({ where: { targetUserId: target.id } }),
+      ).toBe(0);
+    } finally {
+      log.mockRestore();
+    }
   });
   it("export privé, suppression et anonymisation préservent les faits financiers", async () => {
     const exp = await req("/privacy/export", "GET", undefined, a.cookie);

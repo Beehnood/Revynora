@@ -1,0 +1,100 @@
+name: revynora-prod
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "10m", max-file: "3" }
+services:
+  postgres:
+    mem_limit: ${POSTGRES_MEMORY_LIMIT:-1024m}
+    cpus: ${POSTGRES_CPU_LIMIT:-1}
+    image: postgres:17.6-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: revynora
+      POSTGRES_DB: revynora
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in private env file}
+    volumes: ["postgres:/var/lib/postgresql/data"]
+    networks: [private]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U revynora -d revynora"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    logging: *logging
+  redis:
+    mem_limit: ${REDIS_MEMORY_LIMIT:-256m}
+    cpus: ${REDIS_CPU_LIMIT:-0.5}
+    image: redis:7.4.6-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD}
+    command:
+      [
+        "sh",
+        "-c",
+        'exec redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy noeviction --requirepass "$$REDIS_PASSWORD"',
+      ]
+    volumes: ["redis:/data"]
+    networks: [private]
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "REDISCLI_AUTH=$$REDIS_PASSWORD redis-cli ping | grep -q PONG",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging: *logging
+  api:
+    image: revynora-api:${REVYNORA_IMAGE_TAG:-candidate}
+    build:
+      {
+        context: ../..,
+        dockerfile: infra/production/Dockerfile.api,
+        target: runtime,
+      }
+    mem_limit: ${API_MEMORY_LIMIT:-768m}
+    cpus: ${API_CPU_LIMIT:-1}
+    init: true
+    restart: unless-stopped
+    env_file: ["${REVYNORA_ENV_FILE:-.env.production}"]
+    environment:
+      HOST: 0.0.0.0
+      PORT: 3001
+      DATABASE_URL: postgresql://revynora:${POSTGRES_PASSWORD}@postgres:5432/revynora?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379
+      NODE_ENV: production
+      COOKIE_SECURE: "true"
+      TRUST_PROXY_HOPS: 1
+      WEB_ORIGIN: https://revynora.watercode.dev
+      ADMIN_ORIGIN: https://admin.revynora.watercode.dev
+    ports: ["127.0.0.1:${REVYNORA_API_PORT:-3101}:3001"]
+    networks: [private, egress]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    security_opt: ["no-new-privileges:true"]
+    cap_drop: [ALL]
+    logging: *logging
+  migrate:
+    profiles: [tools]
+    build:
+      {
+        context: ../..,
+        dockerfile: infra/production/Dockerfile.api,
+        target: migration,
+      }
+    env_file: ["${REVYNORA_ENV_FILE:-.env.production}"]
+    environment:
+      DATABASE_URL: postgresql://revynora:${POSTGRES_PASSWORD}@postgres:5432/revynora?schema=public
+    networks: [private]
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+    logging: *logging
+volumes:
+  postgres:
+  redis:
+networks:
+  private: { internal: true }
+  egress:
