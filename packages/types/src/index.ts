@@ -162,5 +162,6 @@ export type LearningAccess = {
   source: "INTERNAL" | "COMMERCIAL" | "NONE";
   leitner: boolean;
   planning: boolean;
+  reminders?: boolean;
   internal: { startsAt: string; expiresAt: string | null } | null;
 };

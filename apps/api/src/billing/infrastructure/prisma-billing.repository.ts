@@ -1,3 +1,4 @@
+import { legacyFeatures } from "../../commercial-catalog/domain";
 import type { PrismaClient } from "@prisma/client";
 import { DomainError, missing } from "../../shared/domain/errors";
 import type {
@@ -6,6 +7,7 @@ import type {
   BillingSnapshot,
   Period,
   PlanCode,
+  CommercialQuote,
 } from "../domain/billing";
 export class PrismaBillingRepository implements BillingRepository {
   constructor(readonly db: PrismaClient) {}
@@ -22,20 +24,36 @@ export class PrismaBillingRepository implements BillingRepository {
     });
   }
   async catalog() {
-    return this.db.subscription.findMany({
+    const offers = await this.db.subscription.findMany({
       where: { active: true },
       orderBy: { priceCents: "asc" },
-      select: {
-        id: true,
-        code: true,
-        name: true,
-        priceCents: true,
-        currency: true,
-        interval: true,
-        active: true,
+      include: {
+        versions: {
+          where: { state: "PUBLISHED" },
+          orderBy: { number: "desc" },
+          include: { bindings: true },
+        },
       },
     });
+    return offers.map((o) => {
+      const v = o.versions.find((v) => v.id === o.currentVersionId);
+      return {
+        id: o.id,
+        code: o.code,
+        name: o.name,
+        priceCents: o.priceCents,
+        currency: o.currency,
+        interval: o.interval,
+        active: o.active,
+        commercialVersionId: v?.id,
+        features: v?.features ?? legacyFeatures(o.code),
+        providerPriceId: v?.bindings.find(
+          (b) => b.provider === "stripe" && b.environment === "test",
+        )?.priceId,
+      };
+    });
   }
+
   async account(id: string) {
     const user = await this.db.user.findUnique({
       where: { id },
@@ -66,9 +84,18 @@ export class PrismaBillingRepository implements BillingRepository {
       cancelAtPeriodEnd: p.cancelAtPeriodEnd,
       provider: p.provider,
       providerSubscriptionId: p.providerSubscriptionId,
+      features:
+        p.contractEvidence === "LEGACY_UNVERIFIED"
+          ? legacyFeatures(p.subscription.code)
+          : p.features,
     }));
   }
-  async createCheckout(userId: string, plan: PlanCode, provider: string) {
+  async createCheckout(
+    userId: string,
+    plan: PlanCode,
+    provider: string,
+    expectedQuote: CommercialQuote,
+  ) {
     return this.db.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId} FOR UPDATE`;
       const pending = await tx.checkoutIntent.findFirst({
@@ -80,11 +107,52 @@ export class PrismaBillingRepository implements BillingRepository {
           "CHECKOUT_PENDING",
           "Une session de paiement est déjà en cours. Retrouvez-la dans votre facturation ou attendez son expiration.",
         );
+      await tx.$queryRaw`SELECT id FROM "Subscription" WHERE code=${plan}::"Plan" FOR UPDATE`;
+      const offer = await tx.subscription.findUniqueOrThrow({
+        where: { code: plan },
+      });
+      if (!offer.active)
+        throw new DomainError(409, "PLAN_NOT_FOUND", "Offre indisponible.");
+      const v = offer.currentVersionId
+        ? await tx.commercialOfferVersion.findUnique({
+            where: { id: offer.currentVersionId },
+            include: { bindings: true },
+          })
+        : null;
+      const binding = v?.bindings.find(
+        (b) => b.provider === provider && b.environment === "test",
+      );
+      if (provider === "stripe" && v && !binding)
+        throw new DomainError(
+          422,
+          "PROVIDER_PRICE_REQUIRED",
+          "Prix fournisseur non vérifié.",
+        );
+      if (
+        (v?.id ?? null) !== (expectedQuote.commercialVersionId ?? null) ||
+        offer.priceCents !== expectedQuote.priceCents ||
+        offer.currency !== expectedQuote.currency ||
+        offer.interval !== expectedQuote.interval ||
+        (provider === "stripe" &&
+          (binding?.priceId ?? null) !==
+            (expectedQuote.providerPriceId ?? null))
+      )
+        throw new DomainError(
+          409,
+          "COMMERCIAL_CONFLICT",
+          "Le catalogue a changé pendant la vérification du prix. Recommencez.",
+        );
       return tx.checkoutIntent.create({
         data: {
           userId,
           plan,
           provider,
+          commercialVersionId: v?.id,
+          acceptedPriceCents: v?.priceCents ?? offer.priceCents,
+          acceptedCurrency: v?.currency ?? offer.currency,
+          acceptedInterval: v?.interval ?? offer.interval,
+          acceptedFeatures: v?.features ?? legacyFeatures(plan),
+          acceptedProviderPriceId: binding?.priceId,
           expiresAt: new Date(Date.now() + 30 * 60000),
         },
       });
@@ -217,6 +285,64 @@ export class PrismaBillingRepository implements BillingRepository {
             },
             orderBy: { startsAt: "desc" },
           });
+          const intent =
+            event.checkoutId ||
+            snapshot.commercialVersionId ||
+            snapshot.subscriptionId.startsWith("mock_sub_")
+              ? await tx.checkoutIntent.findFirst({
+                  where: {
+                    userId: snapshot.userId,
+                    provider,
+                    plan: snapshot.plan,
+                    ...(event.checkoutId
+                      ? { providerSessionId: event.checkoutId }
+                      : snapshot.subscriptionId.startsWith("mock_sub_")
+                        ? {
+                            id: snapshot.subscriptionId.slice(
+                              "mock_sub_".length,
+                            ),
+                          }
+                        : {}),
+                    ...(snapshot.commercialVersionId
+                      ? { commercialVersionId: snapshot.commercialVersionId }
+                      : {}),
+                    status: { in: ["PENDING", "COMPLETED"] },
+                  },
+                  orderBy: { createdAt: "desc" },
+                })
+              : null;
+          const versionId =
+            snapshot.commercialVersionId ??
+            (current?.commercialVersionId || intent?.commercialVersionId);
+          const version = versionId
+            ? await tx.commercialOfferVersion.findUniqueOrThrow({
+                where: { id: versionId },
+              })
+            : null;
+          const priceCents =
+            snapshot.priceCents ??
+            current?.priceCents ??
+            intent?.acceptedPriceCents;
+          const currency =
+            snapshot.currency ?? current?.currency ?? intent?.acceptedCurrency;
+          // Unproven legacy rows are retained; no monetary evidence is manufactured from today's catalogue.
+          if (priceCents == null || !currency)
+            throw new DomainError(
+              409,
+              "CONTRACT_PRICE_UNPROVEN",
+              "Tarif contractuel non démontré. Réconciliation requise.",
+            );
+          if (
+            version &&
+            (version.subscriptionId !== offer.id ||
+              version.priceCents !== priceCents ||
+              version.currency !== currency)
+          )
+            throw new DomainError(
+              409,
+              "CONTRACT_PRICE_MISMATCH",
+              "Version contractuelle incohérente.",
+            );
           if (current && current.startsAt > snapshot.startsAt) {
             // A stale snapshot must never reopen an older access period.
           } else {
@@ -242,8 +368,18 @@ export class PrismaBillingRepository implements BillingRepository {
                 subscriptionId: offer.id,
                 provider,
                 providerSubscriptionId: snapshot.subscriptionId,
-                priceCents: offer.priceCents,
-                currency: offer.currency,
+                commercialVersionId: version?.id,
+                providerPriceId: snapshot.providerPriceId,
+                contractEvidence: version ? "VERSIONED" : "PROVIDER_VERIFIED",
+                features:
+                  version?.features ??
+                  snapshot.features ??
+                  (current?.contractEvidence === "LEGACY_UNVERIFIED"
+                    ? legacyFeatures(snapshot.plan)
+                    : current?.features) ??
+                  legacyFeatures(snapshot.plan),
+                priceCents,
+                currency,
                 status: snapshot.status,
                 startsAt: snapshot.startsAt,
                 endsAt: snapshot.endsAt,

@@ -48,6 +48,7 @@ async function main() {
       ],
       ["ux-g7.spec.ts"],
       ["polyvalent-g8.spec.ts"],
+      ["commercial-g9.spec.ts"],
     ]) {
       const code = await new Promise((accept, reject) => {
         const child = spawn(

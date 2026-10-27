@@ -69,11 +69,22 @@ export class BillingUseCases {
     );
     if (!offer)
       throw new DomainError(404, "PLAN_NOT_FOUND", "Offre indisponible.");
+    // Provider reads only: a rejected quote must not leave a local payment intent.
+    try {
+      await this.provider.validateQuote(offer, plan);
+    } catch {
+      throw new DomainError(
+        503,
+        "BILLING_UNAVAILABLE",
+        "Le tarif de cette offre ne peut pas être confirmé. Aucun paiement n’a été démarré.",
+      );
+    }
     const account = await this.repo.account(userId);
     const intent = await this.repo.createCheckout(
       userId,
       plan,
       this.provider.name,
+      offer,
     );
     try {
       const result = await this.provider.checkout({
@@ -82,8 +93,11 @@ export class BillingUseCases {
         customerId: account.customerId,
         email: account.email,
         plan,
-        priceCents: offer.priceCents,
-        currency: offer.currency,
+        commercialVersionId: intent.commercialVersionId,
+        providerPriceId: intent.acceptedProviderPriceId,
+        priceCents: intent.acceptedPriceCents ?? offer.priceCents,
+        currency: intent.acceptedCurrency ?? offer.currency,
+        interval: intent.acceptedInterval ?? offer.interval,
       });
       await this.repo.finishCheckout(intent.id, result);
       return { url: result.url, intentId: intent.id, mode: this.provider.name };
@@ -105,10 +119,16 @@ export class BillingUseCases {
         "INVALID_CHANGE",
         "Choisissez une autre offre pour un abonnement actif.",
       );
+    const offer = (await this.repo.catalog()).find(
+      (p) => p.code === plan && p.active,
+    );
+    if (!offer)
+      throw new DomainError(404, "PLAN_NOT_FOUND", "Offre indisponible.");
     try {
       return await this.provider.changePlan(
         current.period.providerSubscriptionId,
         plan,
+        offer,
       );
     } catch {
       throw new DomainError(

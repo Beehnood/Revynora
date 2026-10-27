@@ -1,3 +1,5 @@
+import { CommercialCatalogController } from "../commercial-catalog/controller";
+import { CommercialCatalogService } from "../commercial-catalog/service";
 import { ManageLearningGrants } from "../learning-access/application/manage-grants";
 import { PrismaInternalGrantRepository } from "../learning-access/infrastructure/manage-grants";
 import { LearningGrantsController } from "./presentation/learning-grants.controller";
@@ -9,8 +11,13 @@ import { PrismaAdminRepository } from "./infrastructure/admin.repository";
 import { AdminController } from "./presentation/admin.controller";
 @Module({
   imports: [AuthModule],
-  controllers: [AdminController, LearningGrantsController],
+  controllers: [
+    AdminController,
+    LearningGrantsController,
+    CommercialCatalogController,
+  ],
   providers: [
+    CommercialCatalogService,
     {
       provide: ManageLearningGrants,
       inject: [DatabaseService],

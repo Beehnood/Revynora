@@ -19,6 +19,9 @@ const { PrismaClient } = require("@prisma/client");
         }),
       ),
     );
+    await require("./initialize-commercial-catalog.cjs").initializeCommercialCatalogue(
+      db,
+    );
     console.log(
       "Catalogue initialized; existing offers preserved. No user, paid period or payment created.",
     );

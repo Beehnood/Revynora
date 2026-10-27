@@ -1,3 +1,4 @@
+import { legacyFeatures } from "../../commercial-catalog/domain";
 import { readSupervision } from "./supervision.repository";
 import type { AdminAccessChange, AdminMetrics } from "@revynora/types";
 import { Logger } from "@nestjs/common";
@@ -181,8 +182,8 @@ export class PrismaAdminRepository implements AdminRepository {
       })),
     };
   }
-  offers() {
-    return this.db.subscription.findMany({
+  async offers() {
+    const rows = await this.db.subscription.findMany({
       orderBy: { priceCents: "asc" },
       select: {
         code: true,
@@ -190,8 +191,16 @@ export class PrismaAdminRepository implements AdminRepository {
         priceCents: true,
         currency: true,
         active: true,
+        interval: true,
+        currentVersion: { select: { id: true, number: true, features: true } },
       },
     });
+    return rows.map(({ currentVersion, ...o }) => ({
+      ...o,
+      features: currentVersion?.features ?? legacyFeatures(o.code),
+      commercialVersionId: currentVersion?.id,
+      version: currentVersion?.number,
+    }));
   }
   async disable(
     actor: string,

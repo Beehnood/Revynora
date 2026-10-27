@@ -29,6 +29,12 @@ const { spawnSync } = require("node:child_process");
     stdio: "inherit",
   });
   if (run.status !== 0) throw new Error("Migration de test impossible");
+  const catalogue = spawnSync("pnpm", ["db:catalog"], {
+    env: { ...process.env, DATABASE_URL: testUrl.toString() },
+    stdio: "inherit",
+  });
+  if (catalogue.status !== 0)
+    throw new Error("Initialisation du catalogue de test impossible");
   console.log("Base revynora_test prête ; données applicatives préservées.");
 })().catch(() => {
   console.error(

@@ -156,8 +156,9 @@ export function AdminView() {
             </div>
           ))}
           <p>
-            Les prix de cette phase sont fixes. Toute nouvelle grille nécessite
-            une nouvelle version de catalogue.
+            Toute nouvelle grille nécessite une nouvelle version de catalogue.
+            Les comptes habilités peuvent la préparer dans la gestion
+            commerciale.
           </p>
         </Card>
         <Card id="admin-events">

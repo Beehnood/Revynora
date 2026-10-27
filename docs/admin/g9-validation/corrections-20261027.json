@@ -1,0 +1,755 @@
+{
+  "date": "2026-10-27",
+  "decision": "GO for local G.9 commit review after explicit user validation; no commit performed",
+  "branch": "feature/admin-commercial-management",
+  "head": "2a3bf2c7fdd0c473477bdddf62fba83bed59bca0",
+  "attempts": [
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "g9-integration",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/api",
+        "exec",
+        "vitest",
+        "run",
+        "--config",
+        "vitest.integration.config.ts",
+        "src/commercial-catalog/commercial.integration.ts",
+        "--maxWorkers=1"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 3.06,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/g9-integration.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "api-integration-coverage",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/api",
+        "exec",
+        "vitest",
+        "run",
+        "--config",
+        "vitest.integration.config.ts",
+        "--coverage",
+        "--maxWorkers=1"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 32.76,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/api-integration-coverage.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "types-packages",
+      "command": [
+        "pnpm",
+        "exec",
+        "turbo",
+        "typecheck",
+        "--filter=./packages/*",
+        "--concurrency=1"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 3.39,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/types-packages.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "types-api",
+      "command": ["pnpm", "--filter", "@revynora/api", "typecheck"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 3.98,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/types-api.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "types-admin",
+      "command": ["pnpm", "--filter", "@revynora/admin", "typecheck"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.8,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/types-admin.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "types-web",
+      "command": ["pnpm", "--filter", "@revynora/web", "typecheck"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.97,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/types-web.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "types-mobile",
+      "command": ["pnpm", "--filter", "@revynora/mobile", "typecheck"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.71,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/types-mobile.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "lint-api",
+      "command": ["pnpm", "--filter", "@revynora/api", "lint"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.66,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/lint-api.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "lint-admin",
+      "command": ["pnpm", "--filter", "@revynora/admin", "lint"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 3.01,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/lint-admin.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "lint-web",
+      "command": ["pnpm", "--filter", "@revynora/web", "lint"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 3.28,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/lint-web.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "lint-mobile",
+      "command": ["pnpm", "--filter", "@revynora/mobile", "lint"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.06,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/lint-mobile.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "lint-ui",
+      "command": ["pnpm", "--filter", "@revynora/ui", "lint"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.49,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/lint-ui.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "lint-api-client",
+      "command": ["pnpm", "--filter", "@revynora/api-client", "lint"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.89,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/lint-api-client.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "prisma-validate",
+      "command": ["pnpm", "exec", "prisma", "validate"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.33,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/prisma-validate.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "prisma-status",
+      "command": ["pnpm", "exec", "prisma", "migrate", "status"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.15,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/prisma-status.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "boundaries",
+      "command": ["node", "scripts/check-boundaries.mjs"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.07,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/boundaries.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "boundaries-tests",
+      "command": ["node", "--test", "scripts/check-boundaries.test.mjs"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.4,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/boundaries-tests.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "prisma-integrity",
+      "command": ["node", "scripts/check-prisma-integrity.mjs"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.08,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/prisma-integrity.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "prettier",
+      "command": ["pnpm", "format:check"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 3.23,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/prettier.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "diff-check",
+      "command": [
+        "git",
+        "-C",
+        "/Users/behnoodpazhang/Documents/docs-projets-dev/Revynora",
+        "diff",
+        "--check"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 0.04,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/diff-check.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "api-unit",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/api",
+        "exec",
+        "vitest",
+        "run",
+        "--maxWorkers=1",
+        "--no-file-parallelism"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 6.5,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/api-unit.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "admin-coverage",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/admin",
+        "exec",
+        "vitest",
+        "run",
+        "--coverage",
+        "--maxWorkers=1",
+        "--no-file-parallelism"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 12.72,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/admin-coverage.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "web-coverage",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/web",
+        "exec",
+        "vitest",
+        "run",
+        "--coverage",
+        "--maxWorkers=1",
+        "--no-file-parallelism"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 8.19,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/web-coverage.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "packages-coverage",
+      "command": [
+        "pnpm",
+        "exec",
+        "turbo",
+        "test:coverage",
+        "--filter=./packages/*",
+        "--concurrency=1"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 1.98,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/packages-coverage.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "build-packages",
+      "command": [
+        "pnpm",
+        "exec",
+        "turbo",
+        "build",
+        "--filter=./packages/*",
+        "--concurrency=1"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 2.35,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/build-packages.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "build-api",
+      "command": ["pnpm", "--filter", "@revynora/api", "build"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 2.86,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/build-api.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "build-admin",
+      "command": ["pnpm", "--filter", "@revynora/admin", "build"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 12.23,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/build-admin.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "build-web",
+      "command": ["pnpm", "--filter", "@revynora/web", "build"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 14.35,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/build-web.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "mobile-coverage",
+      "command": ["pnpm", "--filter", "@revynora/mobile", "test:coverage"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 2.34,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/mobile-coverage.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "mobile-build",
+      "command": ["pnpm", "--filter", "@revynora/mobile", "build"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 10.57,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/mobile-build.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "browser-regression",
+      "command": ["node", "scripts/admin-ci-browser.cjs"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 129.45,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/browser-regression.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "types-api-final",
+      "command": ["pnpm", "--filter", "@revynora/api", "typecheck"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 4.03,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/types-api-final.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "api-complete-final",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/api",
+        "exec",
+        "vitest",
+        "run",
+        "--config",
+        "vitest.integration.config.ts",
+        "--coverage",
+        "--maxWorkers=1"
+      ],
+      "status": "FAIL",
+      "exitCode": 1,
+      "seconds": 32.9,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/api-complete-final.log",
+      "capturedFailure": {
+        "test": "vérifie la capacité commerciale sur les routes API et refuse les corps inconnus",
+        "file": "apps/api/src/commercial-catalog/commercial.integration.ts:264",
+        "expectedHttpStatus": 400,
+        "receivedHttpStatus": 403,
+        "testsPassed": 162,
+        "testsFailed": 1,
+        "cause": "runner used http://127.0.0.1:3412 instead of expected http://localhost:3002",
+        "applicationOriginSecurityChanged": false
+      },
+      "logNote": "Temporary log filename was reused by the successful retry; this record preserves the failed attempt and its captured assertion."
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "build-api-final",
+      "command": ["pnpm", "--filter", "@revynora/api", "build"],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 2.64,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/build-api-final.log"
+    },
+    {
+      "root": "/private/tmp/revynora-g9-frozen-validation",
+      "name": "api-complete-final",
+      "command": [
+        "pnpm",
+        "--filter",
+        "@revynora/api",
+        "exec",
+        "vitest",
+        "run",
+        "--config",
+        "vitest.integration.config.ts",
+        "--coverage",
+        "--maxWorkers=1"
+      ],
+      "status": "PASS",
+      "exitCode": 0,
+      "seconds": 33.24,
+      "log": "/private/tmp/revynora-g9-corrections-20261027/api-complete-final.log"
+    }
+  ],
+  "coverage": {
+    "API": {
+      "lines": {
+        "total": 6567,
+        "covered": 6279,
+        "skipped": 0,
+        "pct": 95.61
+      },
+      "statements": {
+        "total": 6567,
+        "covered": 6279,
+        "skipped": 0,
+        "pct": 95.61
+      },
+      "functions": {
+        "total": 371,
+        "covered": 364,
+        "skipped": 0,
+        "pct": 98.11
+      },
+      "branches": {
+        "total": 1497,
+        "covered": 1324,
+        "skipped": 0,
+        "pct": 88.44
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "Admin": {
+      "lines": {
+        "total": 1896,
+        "covered": 1852,
+        "skipped": 0,
+        "pct": 97.67
+      },
+      "statements": {
+        "total": 1896,
+        "covered": 1852,
+        "skipped": 0,
+        "pct": 97.67
+      },
+      "functions": {
+        "total": 77,
+        "covered": 68,
+        "skipped": 0,
+        "pct": 88.31
+      },
+      "branches": {
+        "total": 384,
+        "covered": 339,
+        "skipped": 0,
+        "pct": 88.28
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "Web": {
+      "lines": {
+        "total": 3890,
+        "covered": 3750,
+        "skipped": 0,
+        "pct": 96.4
+      },
+      "statements": {
+        "total": 3890,
+        "covered": 3750,
+        "skipped": 0,
+        "pct": 96.4
+      },
+      "functions": {
+        "total": 143,
+        "covered": 126,
+        "skipped": 0,
+        "pct": 88.11
+      },
+      "branches": {
+        "total": 775,
+        "covered": 689,
+        "skipped": 0,
+        "pct": 88.9
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "Mobile": {
+      "lines": {
+        "total": 427,
+        "covered": 318,
+        "skipped": 0,
+        "pct": 74.47
+      },
+      "statements": {
+        "total": 447,
+        "covered": 329,
+        "skipped": 0,
+        "pct": 73.6
+      },
+      "functions": {
+        "total": 175,
+        "covered": 102,
+        "skipped": 0,
+        "pct": 58.28
+      },
+      "branches": {
+        "total": 352,
+        "covered": 234,
+        "skipped": 0,
+        "pct": 66.47
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": 100
+      }
+    },
+    "API client": {
+      "lines": {
+        "total": 67,
+        "covered": 67,
+        "skipped": 0,
+        "pct": 100
+      },
+      "statements": {
+        "total": 67,
+        "covered": 67,
+        "skipped": 0,
+        "pct": 100
+      },
+      "functions": {
+        "total": 4,
+        "covered": 4,
+        "skipped": 0,
+        "pct": 100
+      },
+      "branches": {
+        "total": 22,
+        "covered": 19,
+        "skipped": 0,
+        "pct": 86.36
+      },
+      "branchesTrue": {
+        "total": 0,
+        "covered": 0,
+        "skipped": 0,
+        "pct": "Unknown"
+      }
+    }
+  },
+  "tests": {
+    "apiUnit": 99,
+    "stripeUnit": 38,
+    "commercialIntegration": 11,
+    "apiCompleteIncludingUnit": 163,
+    "admin": 49,
+    "web": 44,
+    "mobile": 24,
+    "apiClient": 3,
+    "browser": 25,
+    "boundaryChecker": 5
+  },
+  "sourceSHA256": {
+    "apps/admin/app/(protected)/offres/page.tsx": "862bc5a47e72ad1e0fc63970933e2186ba8f5e2a93f2a2ae7c545c0757919012",
+    "apps/admin/components/admin-shell.tsx": "413f43c853b5af714908695eaabe270d7677ad58d7d6cfd920234102c55dcd66",
+    "apps/admin/components/admin-view.tsx": "c272d497f6ca1c8ceeab17e98dab74e5742108d0e8698767af4152ce4be2c34c",
+    "apps/admin/modules/billing/billing-panel.tsx": "2c240d0bd45e0fdd5802ebfdc286eccc3eb92ffb583393c18c44305d4f574848",
+    "apps/admin/modules/commercial/commercial-panel.tsx": "d6f4c3336a9b7e07a9d9e097c4a86c9d9aaeac76fbef2c1086e7d8adbd40e34d",
+    "apps/admin/tests/commercial.test.tsx": "2953c2e9c401c1b343e847bf23e41a0906143b3553f040ace6f59627f078e89f",
+    "apps/api/src/admin/admin.module.ts": "9c18b584e6b7a8ec742b516377e80254a5721b5e864c417957beca1b2fae52db",
+    "apps/api/src/admin/infrastructure/admin.repository.ts": "71ae5d48dd174ef80cb77c11171a378b0929e920398a6cb80d290b471d33f72a",
+    "apps/api/src/auth/auth.service.ts": "f05bd17141262a823b7098f2361960719fa57022462a355f116ba905c1b8511f",
+    "apps/api/src/billing/application/billing.use-cases.ts": "6f93aacbc0d79a31a8c099bfaf7fc6694b650ca5918023605e4121d48c237f6d",
+    "apps/api/src/billing/domain/billing.ts": "fdf4c0560e9296a3317c13b4e1e4bc328c255d1a962ca5a4a98b5442cd2c37cc",
+    "apps/api/src/billing/infrastructure/billing.provider.ts": "3cae218716e6c311f063476c4a2ddb3374d0d8c95d628d02964355405449faa1",
+    "apps/api/src/billing/infrastructure/prisma-billing.repository.ts": "130438adbfb02b12b5afee54a4685f3ceb84970fd2063d967233b44cc6b17f01",
+    "apps/api/src/billing/infrastructure/stripe-price.ts": "c3ca2b1d0295de29a7566bd0db4f4974a7da920d68c923308bba312b58b93c4d",
+    "apps/api/src/billing/infrastructure/stripe.provider.spec.ts": "6ee1e732997e26a5ec7ec48328f7ff9516c07ecf140eebf81538b8bc4073f762",
+    "apps/api/src/commercial-catalog/commercial.integration.ts": "b61529aab79c54ac160d4ff2091fdcf8d15b756d5759aa4ebf8de5ccd75919ce",
+    "apps/api/src/commercial-catalog/controller.ts": "bece0ccc94cb75cd7d30dd8cc424be2c2511213bbca57dbb965a65c1c7724038",
+    "apps/api/src/commercial-catalog/domain.spec.ts": "47e3275acc3ba9dd6b73ede3d41ba482a292ea52a48f5139e8e7bac7d620b38d",
+    "apps/api/src/commercial-catalog/domain.ts": "278f45530a7cc8087753317aa987306e9e616cf65010a0352662e303f4926b13",
+    "apps/api/src/commercial-catalog/service.ts": "a3db854a18152d6f04f7d199585543a3037892aeb5221b815f36f72bc6823f77",
+    "apps/api/src/learning-access/domain/access.ts": "71b3424b5701b7fd49de25b613d069f59dde16369ad7243ba696a899ad9211ad",
+    "apps/api/src/notifications/application/notifications.use-cases.ts": "427017a9973e32e99043583264d9abb8b8ed6d9e54615ad304d24451da96f902",
+    "apps/api/src/notifications/infrastructure/reminder.worker.ts": "a8628bf2165c85f76947035c5f19beed9a2649d140bd4e2bd37a1106d2264c39",
+    "apps/api/src/saas/saas.integration.ts": "3808aad5c0b65d1805b819817123f5f85048e7ed7006a5649aba8094a36ecee6",
+    "apps/api/vitest.integration.config.ts": "9dbdbd99303c76f96123ce1c8bb04c8e4dea5e572c39905db0d7019f93db4e6c",
+    "apps/mobile/src/screens/account.tsx": "6f53d80b7439f546f7e32237191f54470781c904ffddafd72fcb6602c82dd077",
+    "apps/web/components/saas/billing-view.tsx": "911278da12be8c009c13070d9626c9d349835aa12d83cf201bb5a8077e31e9f2",
+    "apps/web/playwright.polyvalent.config.ts": "9d05e2012f45bbe60aca2a76acf08cdfa346f54a41c5b4980d621a6dc9c8e651",
+    "apps/web/tests/admin-e2e/commercial-g9.spec.ts": "95b22638ade5b71ca52abd39f151768f5ceba5d66ca2a06fb8b9f9e1e9eaa996",
+    "package.json": "b445b8da93340a7a37b31425d3daf376a9fc065fb0ce00708941293669d541db",
+    "packages/types/src/admin.ts": "8e37df1390151eae2a5a44a186104609c6966cb1e3326deea78aeb7db90d6afa",
+    "packages/types/src/index.ts": "b4737653888513652804d78e618e8508d3e5783537a2c9a2e50981d9bd7a4714",
+    "prisma/migrations/20261025000000_commercial_versions/migration.sql": "2f1c288e2448bbb896fa8595e2db103b86c6c9873e63a1b7dc68e6e0c80f5bec",
+    "prisma/migrations/20261025001000_contract_provider_price/migration.sql": "c4e872baab9b2f396da0fa0b428a90eeb770f0c0019be151279807536c246b77",
+    "prisma/migrations/20261026000000_commercial_catalog_guard/migration.sql": "47c3738f5b4d384bf665e465dc3f1c10cfce6a098957b84c103b267f318979a5",
+    "prisma/schema.prisma": "b5d99fb1f1326773245abef97c23b9310bec18b2cc79e1f6c581d1c3a60fd573",
+    "scripts/admin-ci-browser.cjs": "391948fb44086139b72c4e47216b3ba5c60898d9345775d5d52bec53d6eb1f9b",
+    "scripts/initialize-catalog.cjs": "db05e58a8460bdb2d06f65a7f0636008ba0c548cd24d2f6a6495dbadbdeb2b0e",
+    "scripts/initialize-commercial-catalog.cjs": "07296f948cbd76f7f1c242532617e0d602b8a91b354899bc8e1dd1add189506f",
+    "scripts/initialize-test-catalog.cjs": "d81446465140b5478bd8bdfe0c06e78d6ab5eb12330fcc393826cd221304b6cd",
+    "scripts/prepare-test-db.cjs": "230fd2b89f36c14441fb239e92cd4c9a96fd78caf87dca88b3e3d5c59da29ae5",
+    "scripts/test-commercial-upgrade.cjs": "7b31fb061ac77e3fd8759f6581deed3fc339bb6172c5a1202aec4c94f3124e25"
+  },
+  "sourceSnapshotMismatches": [],
+  "migrationChangesSincePreviousValidation": [],
+  "trackedModified": 26,
+  "untracked": 23,
+  "changedFiles": [
+    "apps/admin/app/(protected)/offres/page.tsx",
+    "apps/admin/components/admin-shell.tsx",
+    "apps/admin/components/admin-view.tsx",
+    "apps/admin/modules/billing/billing-panel.tsx",
+    "apps/admin/modules/commercial/commercial-panel.tsx",
+    "apps/admin/tests/commercial.test.tsx",
+    "apps/api/src/admin/admin.module.ts",
+    "apps/api/src/admin/infrastructure/admin.repository.ts",
+    "apps/api/src/auth/auth.service.ts",
+    "apps/api/src/billing/application/billing.use-cases.ts",
+    "apps/api/src/billing/domain/billing.ts",
+    "apps/api/src/billing/infrastructure/billing.provider.ts",
+    "apps/api/src/billing/infrastructure/prisma-billing.repository.ts",
+    "apps/api/src/billing/infrastructure/stripe-price.ts",
+    "apps/api/src/billing/infrastructure/stripe.provider.spec.ts",
+    "apps/api/src/commercial-catalog/commercial.integration.ts",
+    "apps/api/src/commercial-catalog/controller.ts",
+    "apps/api/src/commercial-catalog/domain.spec.ts",
+    "apps/api/src/commercial-catalog/domain.ts",
+    "apps/api/src/commercial-catalog/service.ts",
+    "apps/api/src/learning-access/domain/access.ts",
+    "apps/api/src/notifications/application/notifications.use-cases.ts",
+    "apps/api/src/notifications/infrastructure/reminder.worker.ts",
+    "apps/api/src/saas/saas.integration.ts",
+    "apps/api/vitest.integration.config.ts",
+    "apps/mobile/src/screens/account.tsx",
+    "apps/web/components/saas/billing-view.tsx",
+    "apps/web/playwright.polyvalent.config.ts",
+    "apps/web/tests/admin-e2e/commercial-g9.spec.ts",
+    "docs/admin/G9-GESTION-COMMERCIALE.md",
+    "docs/admin/G9-RECETTE.md",
+    "docs/admin/g9-validation/before-fix/G9-RECETTE.md",
+    "docs/admin/g9-validation/before-fix/stripe-safety-probe.cjs",
+    "docs/admin/g9-validation/corrections-20261027.json",
+    "docs/admin/g9-validation/results.json",
+    "docs/admin/g9-validation/stripe-safety-probe.cjs",
+    "package.json",
+    "packages/types/src/admin.ts",
+    "packages/types/src/index.ts",
+    "prisma/migrations/20261025000000_commercial_versions/migration.sql",
+    "prisma/migrations/20261025001000_contract_provider_price/migration.sql",
+    "prisma/migrations/20261026000000_commercial_catalog_guard/migration.sql",
+    "prisma/schema.prisma",
+    "scripts/admin-ci-browser.cjs",
+    "scripts/initialize-catalog.cjs",
+    "scripts/initialize-commercial-catalog.cjs",
+    "scripts/initialize-test-catalog.cjs",
+    "scripts/prepare-test-db.cjs",
+    "scripts/test-commercial-upgrade.cjs"
+  ],
+  "changedThisMission": [
+    "apps/api/src/billing/application/billing.use-cases.ts",
+    "apps/api/src/billing/domain/billing.ts",
+    "apps/api/src/billing/infrastructure/billing.provider.ts",
+    "apps/api/src/billing/infrastructure/prisma-billing.repository.ts",
+    "apps/api/src/billing/infrastructure/stripe-price.ts",
+    "apps/api/src/billing/infrastructure/stripe.provider.spec.ts",
+    "apps/api/src/commercial-catalog/commercial.integration.ts",
+    "apps/api/src/commercial-catalog/service.ts",
+    "docs/admin/G9-RECETTE.md",
+    "docs/admin/g9-validation/stripe-safety-probe.cjs",
+    "docs/admin/g9-validation/before-fix/stripe-safety-probe.cjs",
+    "docs/admin/g9-validation/before-fix/G9-RECETTE.md",
+    "docs/admin/g9-validation/corrections-20261027.json"
+  ],
+  "rootDependencyLockUnchanged": "f301fa59bf4728c9228c22a89f059241e8ff0d17a441dd02b75f5b0e5a7bab6a",
+  "frozenInstallMatchesLock": true,
+  "rootInstallationRealigned": false,
+  "stripeOfflineProbe": "PASS: three refusals, no provider mutation, no real HTTP",
+  "adminIntegrationIntoWebStarted": false,
+  "historicalEvidence": "results.json and before-fix/ retained",
+  "restrictions": {
+    "commit": false,
+    "push": false,
+    "merge": false,
+    "deployment": false,
+    "applicationOrProductionMigration": false,
+    "realStripeCall": false,
+    "bankChange": false,
+    "branchChange": false,
+    "destructiveContainerOrProofChange": false
+  },
+  "intermediateFailures": [
+    "Initial webhook mock typing corrected by explicit BillingEvent return contract",
+    "Final API runner origin mismatch: 162 passed, 1 rejected with HTTP 403; complete rerun with correct origin passed 163/163"
+  ],
+  "finalApiComplete": {
+    "passed": 163,
+    "failed": 0,
+    "log": "/private/tmp/revynora-g9-corrections-20261027/api-complete-final.log"
+  },
+  "finalChecks": {
+    "prettier": "PASS",
+    "gitDiffCheck": "PASS",
+    "stripeOfflineProbe": "PASS",
+    "index": "empty",
+    "manifestAndLockfileChangesThisMission": false
+  }
+}

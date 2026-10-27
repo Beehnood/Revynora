@@ -11,6 +11,7 @@ const links = [
   { href: "/", label: "Vue générale" },
   { href: "/utilisateurs", label: "Utilisateurs" },
   { href: "/cours", label: "Cours" },
+  { href: "/offres", label: "Gestion commerciale" },
   { href: "/abonnements", label: "Abonnements" },
   { href: "/paiements", label: "Paiements" },
 ];
