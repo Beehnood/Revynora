@@ -9,7 +9,8 @@ permissions:
 jobs:
   foundation:
     name: quality-foundation
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 supports Ubuntu 24.04, not the 26.04 ubuntu-latest image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
       DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public

@@ -33,7 +33,8 @@ concurrency:
 jobs:
   validate:
     name: admin-validation
-    runs-on: ubuntu-latest
+    # Playwright 1.56.1 supports Ubuntu 24.04, not the 26.04 ubuntu-latest image.
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
       EXPO_PUBLIC_API_URL: https://api.revynora.watercode.dev/api/v1
