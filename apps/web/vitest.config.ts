@@ -11,6 +11,7 @@ export default defineConfig({
       provider: "v8",
       include: [
         "components/**/*.{ts,tsx}",
+        "modules/admin/**/*.{ts,tsx}",
         "app/page.tsx",
         "app/admin/**/*.{ts,tsx}",
         "lib/**/*.ts",

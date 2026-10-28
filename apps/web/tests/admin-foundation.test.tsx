@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import Layout from "../app/admin/layout";
-import Page from "../app/admin/page";
 import { readAdminSession } from "../lib/admin-session";
 const state = vi.hoisted(() => ({
   token: "a".repeat(43) as string | undefined,
@@ -17,7 +16,7 @@ vi.mock("next/navigation", () => ({
   },
 }));
 const fetcher = vi.fn();
-const children = <Page />;
+const children = <h1>Administration</h1>;
 beforeEach(() => {
   state.token = "a".repeat(43);
   vi.stubEnv("API_URL", "https://api.example.test");
@@ -76,7 +75,7 @@ it("rend le socle ADMIN sans accorder ni appeler des droits G8/G9", async () => 
   expect(
     screen.getByRole("link", { name: "Mon espace pédagogique" }),
   ).toHaveAttribute("href", "/app");
-  expect(screen.getByRole("link", { name: "Administration" })).toHaveAttribute(
+  expect(screen.getByRole("link", { name: "Vue générale" })).toHaveAttribute(
     "href",
     "/admin",
   );
