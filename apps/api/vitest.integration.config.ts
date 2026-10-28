@@ -10,6 +10,7 @@ export default defineConfig({
       include: [
         "src/auth/**/*.ts",
         "src/billing/**/*.ts",
+        "src/commercial-catalog/**/*.ts",
         "src/leitner/**/*.ts",
         "src/planning/**/*.ts",
         "src/progress/**/*.ts",

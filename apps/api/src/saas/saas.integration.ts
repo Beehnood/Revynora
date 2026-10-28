@@ -1395,6 +1395,13 @@ describe.sequential("Phase 2 — PostgreSQL, sessions et webhooks signés", () =
       data: {
         snapshot: {
           ...snapshot,
+          // The provider fixture now carries the accepted target contract explicitly.
+          commercialVersionId: (
+            await db.subscription.findUniqueOrThrow({ where: { code: "PRO" } })
+          ).currentVersionId,
+          priceCents: 500,
+          currency: "eur",
+          features: ["leitner", "planning", "reminders"],
           plan: "PRO",
           startsAt: startsAt.toISOString(),
           endsAt: new Date(+startsAt + 30 * 86400000).toISOString(),

@@ -230,9 +230,9 @@ function Offers() {
     <Card>
       <h2>Offres et droits</h2>
       <p>
-        Free : tests, cours et historique. Plus : Free + révisions Leitner. Pro
-        : Plus + planning et rappels facultatifs. Ces droits suivent les règles
-        produit existantes.
+        Les fonctionnalités suivent la version contractuelle souscrite. Les
+        conditions ci-dessous concernent les nouvelles souscriptions ; les
+        anciens contrats et les droits pédagogiques internes sont conservés.
       </p>
       {r.loading && <LoadingState />}
       {r.error && (
@@ -245,7 +245,8 @@ function Offers() {
       {r.data?.map((o) => (
         <p className="admin-offer" key={o.code}>
           {label(o.code)} · <Money value={o.priceCents} currency={o.currency} />{" "}
-          · {o.active ? "Offre active" : "Offre inactive"}
+          · {o.active ? "Offre active" : "Offre inactive"} ·{" "}
+          {o.features?.join(", ") || "Socle gratuit"}
         </p>
       ))}
     </Card>

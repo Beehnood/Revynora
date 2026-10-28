@@ -47,6 +47,9 @@ export type AdminMetrics = {
   subscriptions: { status: string; _count: number }[];
 };
 export type AdminOffer = {
+  features?: string[];
+  interval?: string;
+  version?: number;
   code: "FREE" | "PLUS" | "PRO";
   name: string;
   priceCents: number;

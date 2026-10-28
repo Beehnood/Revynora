@@ -44,6 +44,8 @@ export function resolveLearningAccess(
         : ("NONE" as const),
     leitner: allowed && (!!grant || commercial.leitner),
     planning: allowed && (!!grant || commercial.planning),
+    reminders:
+      allowed && (!!grant || (commercial.reminders ?? commercial.planning)),
     internal: grant
       ? {
           startsAt: grant.startsAt.toISOString(),

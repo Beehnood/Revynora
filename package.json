@@ -18,7 +18,7 @@
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate deploy",
     "db:check": "pnpm --filter @revynora/api db:check",
-    "db:seed": "node prisma/seed.cjs",
+    "db:seed": "node scripts/initialize-test-catalog.cjs",
     "test:integration": "pnpm test:prepare && pnpm --filter @revynora/api test:integration",
     "test:prepare": "node scripts/prepare-test-db.cjs",
     "admin:promote": "node scripts/admin-promote.cjs",

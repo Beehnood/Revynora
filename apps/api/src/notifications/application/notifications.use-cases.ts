@@ -1,3 +1,4 @@
+import { DomainError } from "../../shared/domain/errors";
 import type { GetLearningAccess } from "../../learning-access/application/learning-access";
 import type { PreferenceRepository } from "../domain/notifications";
 export class NotificationUseCases {
@@ -9,7 +10,15 @@ export class NotificationUseCases {
     return this.repo.preferences(user);
   }
   async update(user: string, enabled: boolean, zone: string) {
-    if (enabled) await this.access.require(user, "PRO");
+    if (enabled) {
+      const rights = await this.access.require(user, "PRO");
+      if (rights.reminders === false)
+        throw new DomainError(
+          403,
+          "PLAN_REQUIRED",
+          "Rappels non inclus dans le contrat.",
+        );
+    }
     return this.repo.update(user, enabled, zone);
   }
   inbox(user: string) {

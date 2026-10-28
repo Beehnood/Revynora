@@ -230,6 +230,9 @@ export function ProfileScreen() {
 export function SubscriptionScreen() {
   const resource = useRemote<{
     plan: string;
+    leitner: boolean;
+    planning: boolean;
+    reminders?: boolean;
     period: { endsAt: string; cancelAtPeriodEnd: boolean } | null;
     mode: string;
   }>("/subscriptions/me");
@@ -241,11 +244,10 @@ export function SubscriptionScreen() {
         <Card>
           <Title>{resource.data.plan}</Title>
           <Copy>
-            {resource.data.plan === "FREE"
-              ? "Tests, cours, révisions classiques et progression."
-              : resource.data.plan === "PLUS"
-                ? "Tests, cours, progression et système Leitner."
-                : "Tests, cours, Leitner, planning intelligent et rappels."}
+            Tests, cours, révisions classiques et progression.
+            {resource.data.leitner ? " Révisions Leitner incluses." : ""}
+            {resource.data.planning ? " Planning inclus." : ""}
+            {resource.data.reminders ? " Rappels facultatifs inclus." : ""}
           </Copy>
           {resource.data.period && (
             <Copy>

@@ -5,7 +5,7 @@ if (process.env.G8_ISOLATED_TEST_DB !== "true")
 export default defineConfig({
   ...admin,
   testMatch:
-    /(?:admin-g2|statistics-g3|catalog-g4|billing-g6|ux-g7|polyvalent-g8)\.spec\.ts/,
+    /(?:admin-g2|statistics-g3|catalog-g4|billing-g6|ux-g7|polyvalent-g8|commercial-g9)\.spec\.ts/,
   timeout: 180000,
   outputDir:
     process.env.UX_ARTIFACT_DIR ?? "/private/tmp/revynora-g8-browser-results",

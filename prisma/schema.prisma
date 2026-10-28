@@ -51,6 +51,7 @@ model User {
   termsAcceptedAt DateTime?
   disabledAt DateTime?
   stripeCustomerId String? @unique
+  commercialPermission CommercialPermission?
   subscriptionPeriods UserSubscriptionHistory[]
   payments Payment[]
   paymentEvents UserPaymentHistory[]
@@ -197,9 +198,18 @@ model Subscription {
   interval String @default("month")
   active Boolean @default(true)
   providerPriceId String? @unique
+  revision Int @default(0)
+  currentVersionId String? @unique
+  currentVersion CommercialOfferVersion? @relation("CurrentOfferVersion",fields:[currentVersionId],references:[id],onDelete:Restrict,onUpdate:NoAction)
+  versions CommercialOfferVersion[] @relation("OfferVersions")
   periods UserSubscriptionHistory[]
 }
 model UserSubscriptionHistory {
+  providerPriceId String?
+  commercialVersionId String?
+  commercialVersion CommercialOfferVersion? @relation(fields:[commercialVersionId],references:[id],onDelete:Restrict)
+  contractEvidence String @default("LEGACY_UNVERIFIED")
+  features String[] @default([])
   id String @id @default(uuid())
   userId String
   user User @relation(fields:[userId],references:[id],onDelete:Cascade)
@@ -218,6 +228,13 @@ model UserSubscriptionHistory {
   @@index([userId, startsAt, endsAt])
 }
 model CheckoutIntent {
+  commercialVersionId String?
+  commercialVersion CommercialOfferVersion? @relation(fields:[commercialVersionId],references:[id],onDelete:Restrict)
+  acceptedPriceCents Int?
+  acceptedCurrency String?
+  acceptedInterval String?
+  acceptedFeatures String[] @default([])
+  acceptedProviderPriceId String?
   id String @id @default(uuid())
   userId String
   user User @relation(fields:[userId],references:[id],onDelete:Cascade)
@@ -414,4 +431,57 @@ model InternalLearningGrant {
   revokedBy User? @relation("LearningRevoker", fields:[revokedById], references:[id], onDelete:Restrict)
   revocationReason String?
   @@index([userId, revokedAt, startsAt])
+}
+
+// Explicit commercial capability. No automatic grant, including to ADMIN accounts.
+model CommercialPermission {
+ userId String @id
+ user User @relation(fields:[userId],references:[id],onDelete:Restrict)
+ grantedAt DateTime @default(now())
+ provenance String
+}
+model CommercialOfferVersion {
+ id String @id @default(uuid())
+ subscriptionId String
+ subscription Subscription @relation("OfferVersions",fields:[subscriptionId],references:[id],onDelete:Restrict)
+ currentFor Subscription? @relation("CurrentOfferVersion")
+ number Int
+ basedOnRevision Int
+ name String
+ priceCents Int
+ currency String
+ interval String
+ active Boolean
+ features String[]
+ reason String
+ createdById String?
+ createdAt DateTime @default(now())
+ state String @default("DRAFT")
+ bindings CommercialProviderPrice[]
+ periods UserSubscriptionHistory[]
+ checkouts CheckoutIntent[]
+ @@unique([subscriptionId,number])
+}
+model CommercialProviderPrice {
+ id String @id @default(uuid())
+ versionId String
+ version CommercialOfferVersion @relation(fields:[versionId],references:[id],onDelete:Restrict)
+ provider String
+ environment String
+ accountId String
+ priceId String
+ verifiedAt DateTime @default(now())
+ verifiedById String
+ @@unique([provider,environment,accountId,priceId])
+ @@unique([versionId,provider])
+}
+model CommercialAudit {
+ id String @id @default(uuid())
+ actorId String
+ action String
+ subscriptionId String
+ versionId String
+ beforeVersionId String?
+ reason String
+ createdAt DateTime @default(now())
 }

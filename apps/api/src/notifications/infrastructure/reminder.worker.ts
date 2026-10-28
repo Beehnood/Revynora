@@ -119,6 +119,7 @@ export class ReminderWorker implements OnModuleInit, OnModuleDestroy {
         user.disabledAt ||
         !user.remindersEnabled ||
         !rights.planning ||
+        rights.reminders === false ||
         !fresh ||
         fresh.version !== row.version ||
         fresh.status !== "PLANNED" ||

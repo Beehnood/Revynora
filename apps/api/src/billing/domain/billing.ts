@@ -1,5 +1,14 @@
+import { legacyFeatures } from "../../commercial-catalog/domain";
 export type PlanCode = "FREE" | "PLUS" | "PRO";
-export type PlanOffer = {
+export type CommercialQuote = {
+  commercialVersionId?: string | null;
+  priceCents: number;
+  currency: string;
+  interval: string;
+  features?: string[];
+  providerPriceId?: string | null;
+};
+export type PlanOffer = CommercialQuote & {
   id: string;
   code: PlanCode;
   name: string;
@@ -24,9 +33,11 @@ export type Period = {
   cancelAtPeriodEnd: boolean;
   provider: string;
   providerSubscriptionId: string;
+  features?: string[];
 };
 export type Entitlement = {
   plan: PlanCode;
+  reminders?: boolean;
   leitner: boolean;
   planning: boolean;
   period: Period | null;
@@ -48,7 +59,19 @@ export function resolveEntitlement(periods: Period[], now: Date): Entitlement {
           b.startsAt.getTime() - a.startsAt.getTime(),
       )[0] ?? null;
   const plan = period?.plan ?? "FREE";
-  return { plan, leitner: plan !== "FREE", planning: plan === "PRO", period };
+  const freeContract = periods
+    .filter((p) => p.plan === "FREE" && p.startsAt <= now)
+    .sort((a, b) => b.startsAt.getTime() - a.startsAt.getTime())[0];
+  const features =
+    period?.features ??
+    (period ? legacyFeatures(plan) : (freeContract?.features ?? []));
+  return {
+    plan,
+    leitner: features.includes("leitner"),
+    planning: features.includes("planning"),
+    reminders: features.includes("reminders"),
+    period,
+  };
 }
 export interface EntitlementRepository {
   periods(userId: string): Promise<Period[]>;
@@ -61,8 +84,15 @@ export type BillingEvent = {
   invoiceId?: string;
   customerId?: string;
   checkoutId?: string;
+  accountId?: string;
+  livemode?: boolean;
 };
 export type BillingSnapshot = {
+  commercialVersionId?: string | null;
+  providerPriceId?: string;
+  priceCents?: number;
+  currency?: string;
+  features?: string[];
   userId: string;
   customerId: string;
   subscriptionId: string;
@@ -80,6 +110,12 @@ export type BillingSnapshot = {
   };
 };
 export type Checkout = {
+  commercialVersionId?: string | null;
+  acceptedPriceCents?: number | null;
+  acceptedCurrency?: string | null;
+  acceptedInterval?: string | null;
+  acceptedFeatures?: string[];
+  acceptedProviderPriceId?: string | null;
   id: string;
   userId: string;
   plan: PlanCode;
@@ -90,7 +126,10 @@ export type Checkout = {
 };
 export interface BillingProvider {
   readonly name: "mock" | "stripe";
+  validateQuote(quote: CommercialQuote, plan: PlanCode): Promise<void>;
   checkout(input: {
+    commercialVersionId?: string | null;
+    providerPriceId?: string | null;
     intentId: string;
     userId: string;
     customerId: string | null;
@@ -98,11 +137,13 @@ export interface BillingProvider {
     plan: PlanCode;
     priceCents: number;
     currency: string;
+    interval: string;
   }): Promise<{ id: string; url: string; customerId: string }>;
   portal(customerId: string): Promise<string>;
   changePlan(
     subscriptionId: string,
     plan: "PLUS" | "PRO",
+    quote: CommercialQuote,
   ): Promise<{ effectiveAt: Date }>;
   verify(raw: Buffer, signature: string): BillingEvent;
   reconcile(event: BillingEvent): Promise<BillingSnapshot | null>;
@@ -119,6 +160,7 @@ export interface BillingRepository extends EntitlementRepository {
     userId: string,
     plan: PlanCode,
     provider: string,
+    expectedQuote: CommercialQuote,
   ): Promise<Checkout>;
   finishCheckout(
     id: string,

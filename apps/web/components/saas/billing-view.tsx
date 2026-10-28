@@ -8,12 +8,25 @@ import { api, message } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
 import { Card, PageHeader, Badge, Alert, LoadingState } from "../ui";
 import { Button } from "../ui/button";
-type Offer = { code: string; name: string; priceCents: number };
+type Offer = {
+  code: string;
+  name: string;
+  priceCents: number;
+  currency?: string;
+  interval?: string;
+  features?: string[];
+};
 type Current = {
   plan: string;
   mode: string;
   canManage?: boolean;
-  pending?: { id: string; url: string | null };
+  pending?: {
+    id: string;
+    url: string | null;
+    acceptedPriceCents?: number | null;
+    acceptedCurrency?: string | null;
+    acceptedInterval?: string | null;
+  };
   period: null | { endsAt: string; cancelAtPeriodEnd: boolean };
 };
 type Payment = {
@@ -177,6 +190,24 @@ function CommercialBillingView() {
       {simulation && (
         <Card>
           <h2>Confirmer la simulation</h2>
+          {current.data?.pending?.id === simulation &&
+            current.data.pending.acceptedPriceCents != null && (
+              <p>
+                Tarif conservé pour ce paiement simulé :{" "}
+                {(current.data.pending.acceptedPriceCents / 100).toLocaleString(
+                  "fr-FR",
+                  {
+                    style: "currency",
+                    currency: current.data.pending.acceptedCurrency ?? "EUR",
+                  },
+                )}{" "}
+                /{" "}
+                {current.data.pending.acceptedInterval === "month"
+                  ? "mois"
+                  : "sans récurrence"}
+                .
+              </p>
+            )}
           <p>
             Ce parcours reproduit une confirmation ou un refus de paiement.
             Aucun argent n’est débité.
@@ -235,16 +266,31 @@ function CommercialBillingView() {
             <h2>
               {(p.priceCents / 100).toLocaleString("fr-FR", {
                 style: "currency",
-                currency: "EUR",
+                currency: p.currency ?? "EUR",
               })}
-              <small> / mois</small>
+              {p.code !== "FREE" && <small> / mois</small>}
             </h2>
             <p>
-              {p.code === "FREE"
-                ? "Tests, cours et historique pédagogique."
-                : p.code === "PLUS"
-                  ? "Tout Free, avec les cartes et les révisions Leitner."
-                  : "Tout Plus, avec le planning et les rappels facultatifs."}
+              {p.features
+                ? "Tests, cours et historique" +
+                  (p.features.length
+                    ? " · " +
+                      p.features
+                        .map(
+                          (f) =>
+                            ({
+                              leitner: "Révisions Leitner",
+                              planning: "Planning",
+                              reminders: "Rappels facultatifs",
+                            })[f as "leitner" | "planning" | "reminders"],
+                        )
+                        .join(" · ")
+                    : "")
+                : p.code === "FREE"
+                  ? "Tests, cours et historique pédagogique."
+                  : p.code === "PLUS"
+                    ? "Tout Free, avec les cartes et les révisions Leitner."
+                    : "Tout Plus, avec le planning et les rappels facultatifs."}
             </p>
             {p.code !== "FREE" && (
               <Button

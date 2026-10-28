@@ -90,6 +90,11 @@ export class AuthService {
     const passwordHash = await hashPassword(data.password);
     const token = randomBytes(32).toString("base64url");
     const maxAge = this.env.SESSION_DAYS * 86400000;
+    const freeOffer = await this.db.client.subscription.findUnique({
+      where: { code: "FREE" },
+      include: { currentVersion: true },
+    });
+    const freeVersion = freeOffer?.currentVersion;
     const user = await this.db.client.user.create({
       data: {
         email: data.email,
@@ -114,6 +119,11 @@ export class AuthService {
                 },
               },
             },
+            commercialVersion: freeVersion
+              ? { connect: { id: freeVersion.id } }
+              : undefined,
+            contractEvidence: freeVersion ? "VERSIONED" : "LEGACY_UNVERIFIED",
+            features: freeVersion?.features ?? [],
             provider: "internal",
             providerSubscriptionId: "free_" + randomUUID(),
             priceCents: 0,
