@@ -2,13 +2,18 @@ import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { AdminShell } from "../components/admin/admin-shell";
 import { api } from "../lib/api";
+const navigation = vi.hoisted(() => ({ path: "/admin" }));
+vi.mock("next/navigation", () => ({ usePathname: () => navigation.path }));
 vi.mock("../lib/api", async (original) => ({
   ...(await original<typeof import("../lib/api")>()),
   api: vi.fn(),
 }));
-beforeEach(() => vi.clearAllMocks());
+beforeEach(() => {
+  vi.clearAllMocks();
+  navigation.path = "/admin";
+});
 afterEach(() => vi.unstubAllGlobals());
-it("active uniquement l’accueil et le lien pédagogique, sans liens vers les écrans futurs", () => {
+it("active uniquement les routes intégrées, sans liens vers les écrans futurs", () => {
   render(
     <AdminShell>
       <h1>Administration</h1>
@@ -20,13 +25,7 @@ it("active uniquement l’accueil et le lien pédagogique, sans liens vers les �
   const link = screen.getByRole("link", { name: "Vue générale" });
   expect(link).toHaveAttribute("href", "/admin");
   expect(link).toHaveAttribute("aria-current", "page");
-  for (const label of [
-    "Utilisateurs",
-    "Cours",
-    "Gestion commerciale",
-    "Abonnements",
-    "Paiements",
-  ]) {
+  for (const label of ["Gestion commerciale", "Abonnements", "Paiements"]) {
     expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     expect(screen.getByText(label)).toHaveAttribute("aria-disabled", "true");
   }
@@ -92,4 +91,22 @@ it("efface l’état privé avec une navigation complète après déconnexion r�
   fireEvent.click(screen.getByRole("button", { name: "Se déconnecter" }));
   await waitFor(() => expect(assign).toHaveBeenCalledWith("/connexion"));
   vi.unstubAllGlobals();
+});
+
+it.each([
+  "/admin/utilisateurs",
+  "/admin/utilisateurs/id",
+  "/admin/cours",
+  "/admin/cours/id",
+])("active la rubrique intégrée correspondant à %s", (path) => {
+  navigation.path = path;
+  render(<AdminShell>Contenu</AdminShell>);
+  expect(
+    screen.getByRole("link", {
+      name: path.startsWith("/admin/utilisateurs") ? "Utilisateurs" : "Cours",
+    }),
+  ).toHaveAttribute("aria-current", "page");
+  expect(
+    screen.getByRole("link", { name: "Vue générale" }),
+  ).not.toHaveAttribute("aria-current");
 });

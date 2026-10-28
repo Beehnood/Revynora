@@ -2,18 +2,14 @@
 /* eslint-disable @next/next/no-location-assign-relative-destination -- clear authenticated state after logout */
 import { useRef, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Brand } from "@revynora/ui/brand";
 import { Button } from "@revynora/ui/button";
 import { Alert } from "@revynora/ui";
 import { api, message } from "@/lib/api";
-const future = [
-  "Utilisateurs",
-  "Cours",
-  "Gestion commerciale",
-  "Abonnements",
-  "Paiements",
-];
+const future = ["Gestion commerciale", "Abonnements", "Paiements"];
 export function AdminShell({ children }: { children: React.ReactNode }) {
+  const path = usePathname();
   const [open, setOpen] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -46,16 +42,31 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
             className="admin-nav"
             aria-label="Administration"
           >
-            <Link
-              href="/admin"
-              aria-current="page"
-              onClick={() => {
-                setOpen(false);
-                toggle.current?.focus();
-              }}
-            >
-              Vue générale
-            </Link>
+            {[
+              { href: "/admin", label: "Vue générale" },
+              { href: "/admin/utilisateurs", label: "Utilisateurs" },
+              { href: "/admin/cours", label: "Cours" },
+            ].map((link) => (
+              <Link
+                key={link.href}
+                href={link.href}
+                aria-current={
+                  (
+                    link.href === "/admin"
+                      ? path === link.href
+                      : path === link.href || path.startsWith(link.href + "/")
+                  )
+                    ? "page"
+                    : undefined
+                }
+                onClick={() => {
+                  setOpen(false);
+                  toggle.current?.focus();
+                }}
+              >
+                {link.label}
+              </Link>
+            ))}
             {future.map((label) => (
               <span
                 key={label}

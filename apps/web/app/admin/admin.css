@@ -267,3 +267,33 @@
     font-size: 0.75rem;
   }
 }
+
+.integrated-admin .admin-main dd {
+  margin: 0 0 1rem;
+  overflow-wrap: anywhere;
+}
+.integrated-admin .admin-main dt {
+  font-weight: 600;
+}
+.integrated-admin .catalog-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+}
+.integrated-admin .admin-pagination {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  padding-top: 16px;
+}
+.integrated-admin .admin-result-count {
+  font-weight: 600;
+}
+.integrated-admin .admin-scroll-hint {
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.integrated-admin #admin-users .admin-table {
+  min-width: 560px;
+}
