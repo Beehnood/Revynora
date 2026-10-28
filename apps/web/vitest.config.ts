@@ -9,7 +9,12 @@ export default defineConfig({
     include: ["tests/**/*.test.tsx"],
     coverage: {
       provider: "v8",
-      include: ["components/**/*.{ts,tsx}", "app/page.tsx", "lib/**/*.ts"],
+      include: [
+        "components/**/*.{ts,tsx}",
+        "app/page.tsx",
+        "app/admin/**/*.{ts,tsx}",
+        "lib/**/*.ts",
+      ],
       reporter: ["text", "html", "json-summary"],
       thresholds: { lines: 85, functions: 85, branches: 75, statements: 85 },
     },

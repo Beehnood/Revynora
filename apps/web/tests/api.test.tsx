@@ -66,3 +66,52 @@ it("gère le chargement, l’erreur puis une reprise effective", async () => {
     expect(screen.getByText("Données chargées")).toBeVisible(),
   );
 });
+
+it("autorise uniquement le retour Admin racine, sans redirection externe ou traversée", () => {
+  expect(safeReturn("/admin")).toBe("/admin");
+  for (const path of [
+    "/administrator",
+    "/admin/../evil",
+    "/admin//evil",
+    "/admin?retour=https://evil.test",
+    "/admin#evil",
+    "/%2f%2fevil.test",
+    "/admin\\evil",
+  ]) {
+    expect(safeReturn(path)).toBe("/app");
+  }
+});
+it.each(["/admin", "/admin/offres", "/app", "/app/profil"])(
+  "reconnecte une session expirée sur %s en conservant le cookie same-origin",
+  async (pathname) => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", { location: { pathname, assign } });
+    const fetcher = vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ code: "AUTH_REQUIRED" }), {
+        status: 401,
+      }),
+    );
+    vi.stubGlobal("fetch", fetcher);
+    await expect(api("/users/me")).rejects.toMatchObject({ status: 401 });
+    expect(assign).toHaveBeenCalledWith(
+      "/connexion?retour=" +
+        encodeURIComponent(pathname.startsWith("/admin") ? "/admin" : pathname),
+    );
+    expect(fetcher.mock.calls[0][1].credentials).toBe("same-origin");
+  },
+);
+it.each(["/connexion", "/administrator", "/application", "/"])(
+  "ne redirige pas une page publique sur un 401 (%s)",
+  async (pathname) => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", { location: { pathname, assign } });
+    vi.stubGlobal(
+      "fetch",
+      vi
+        .fn()
+        .mockResolvedValue(new Response(JSON.stringify({}), { status: 401 })),
+    );
+    await expect(api("/users/me")).rejects.toMatchObject({ status: 401 });
+    expect(assign).not.toHaveBeenCalled();
+  },
+);

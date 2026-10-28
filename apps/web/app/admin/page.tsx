@@ -1,4 +1,8 @@
-// Compatibility route: authorization and redirect live in the layout.
 export default function Page() {
-  return null;
+  return (
+    <>
+      <h1>Administration</h1>
+      <p>Bienvenue dans votre espace d’administration.</p>
+    </>
+  );
 }
