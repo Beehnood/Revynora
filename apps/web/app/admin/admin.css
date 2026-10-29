@@ -297,3 +297,45 @@
 .integrated-admin #admin-users .admin-table {
   min-width: 560px;
 }
+
+.integrated-admin .admin-filters {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 20px;
+}
+.integrated-admin .admin-filters label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+}
+.integrated-admin .admin-filters select {
+  border: 1px solid var(--border);
+  background: white;
+  border-radius: 8px;
+  padding: 10px 12px;
+  min-height: 44px;
+  width: 100%;
+  color: var(--foreground);
+  font-weight: 400;
+}
+.integrated-admin .admin-reference {
+  display: inline-block;
+  max-width: 12ch;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  font-family: monospace;
+}
+.integrated-admin .admin-offer {
+  padding-block: 10px;
+  border-bottom: 1px solid var(--border);
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 767px) {
+  .integrated-admin .admin-filters {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

@@ -1,6 +1,6 @@
 import { test, expect } from "@playwright/test";
 import { PrismaClient } from "@prisma/client";
-import { randomBytes, randomUUID, scryptSync } from "node:crypto";
+import { randomBytes, randomUUID, scryptSync, createHash } from "node:crypto";
 const db = new PrismaClient({
   datasources: { db: { url: process.env.TEST_DATABASE_URL } },
 });
@@ -156,11 +156,11 @@ for (const width of [375, 768, 1280])
       ).toHaveAttribute("aria-expanded", "true");
     }
     const nav = page.getByRole("navigation", { name: "Administration" });
-    await expect(nav.getByRole("link")).toHaveCount(3);
+    await expect(nav.getByRole("link")).toHaveCount(5);
     await expect(
       nav.getByRole("link", { name: "Vue générale" }),
     ).toHaveAttribute("href", "/admin");
-    await expect(nav.locator('[aria-disabled="true"]')).toHaveCount(3);
+    await expect(nav.locator('[aria-disabled="true"]')).toHaveCount(1);
     const { default: AxeBuilder } = await import("@axe-core/playwright");
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     expect(
@@ -176,7 +176,7 @@ for (const width of [375, 768, 1280])
       await toggle.click();
     }
     // Direct URLs must not expose any screen from a later lot.
-    for (const path of ["offres", "abonnements", "paiements"]) {
+    for (const path of ["offres"]) {
       expect((await page.request.get("/admin/" + path)).status()).toBe(404);
     }
     await page.getByRole("button", { name: "Se déconnecter" }).click();
@@ -493,4 +493,298 @@ test("droits catalogue, pannes API, réponse vide et refus de permission sans an
     page.getByRole("alert").filter({ hasText: /introuvable/i }),
   ).toBeVisible();
   await expect(page.getByText("PRIVATE-CONTENT-NEVER-EXPOSE")).toHaveCount(0);
+});
+
+// Persist only opaque test sessions. No financial records or supplier calls are created.
+async function financeSession(
+  page: import("@playwright/test").Page,
+  role: "ADMIN" | "STUDENT" = "ADMIN",
+) {
+  const user = await account(role),
+    token = randomBytes(32).toString("base64url");
+  await db.session.create({
+    data: {
+      userId: user.id,
+      tokenHash: createHash("sha256").update(token).digest("hex"),
+      expiresAt: new Date(Date.now() + 3600000),
+    },
+  });
+  await page.context().addCookies([
+    {
+      name: "revynora_session",
+      value: token,
+      url: "http://127.0.0.1:3450",
+      httpOnly: true,
+      sameSite: "Lax",
+    },
+  ]);
+  return user;
+}
+async function mockFinance(page: import("@playwright/test").Page) {
+  await page.route("**/api/v1/admin/payments?*", (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    const rows = Array.from({ length: 22 }, (_, i) => ({
+      id: "simulation-payment-" + i,
+      provider: i === 0 ? "stripe" : "mock",
+      status: i === 0 ? "REFUNDED" : "PAID",
+      amountCents: 250,
+      currency: "eur",
+      verification: i === 0 ? "UNVERIFIED" : "SIMULATION",
+      createdAt: "2020-01-01T00:00:00Z",
+    })).filter(
+      (r) =>
+        (q.get("provider") === "ALL" || q.get("provider") === r.provider) &&
+        (q.get("status") === "ALL" || q.get("status") === r.status),
+    );
+    const number = Number(q.get("page"));
+    return route.fulfill({
+      json: {
+        items: rows.slice((number - 1) * 20, number * 20),
+        total: rows.length,
+        page: number,
+        pageSize: 20,
+      },
+    });
+  });
+  await page.route("**/api/v1/admin/subscriptions?*", (route) => {
+    const q = new URL(route.request().url()).searchParams;
+    const rows = Array.from({ length: 21 }, (_, i) => ({
+      id: "simulation-period-" + i,
+      provider: i % 3 === 0 ? "internal" : i % 3 === 1 ? "stripe" : "mock",
+      status: i % 2 === 0 ? "ACTIVE" : "CANCELLED",
+      plan: i % 2 === 0 ? "PRO" : "PLUS",
+      priceCents: 250,
+      currency: "eur",
+      startsAt: "2020-01-01",
+      endsAt: "2020-02-01",
+      cancelAtPeriodEnd: i % 2 === 0,
+    })).filter(
+      (r) =>
+        (q.get("provider") === "ALL" || q.get("provider") === r.provider) &&
+        (q.get("status") === "ALL" || q.get("status") === r.status) &&
+        (q.get("plan") === "ALL" || q.get("plan") === r.plan),
+    );
+    const number = Number(q.get("page"));
+    return route.fulfill({
+      json: {
+        items: rows.slice((number - 1) * 20, number * 20),
+        total: rows.length,
+        page: number,
+        pageSize: 20,
+      },
+    });
+  });
+  await page.route("**/api/v1/admin/offers", (route) =>
+    route.fulfill({
+      json: [
+        {
+          code: "FREE",
+          priceCents: 0,
+          currency: "eur",
+          active: true,
+          features: [],
+        },
+        {
+          code: "PRO",
+          priceCents: 750,
+          currency: "eur",
+          active: true,
+          features: ["leitner", "planning", "reminders"],
+        },
+      ],
+    }),
+  );
+}
+for (const width of [375, 768, 1280])
+  test(`abonnements et paiements G6, filtres, Axe et responsive ${width}px`, async ({
+    page,
+  }) => {
+    await financeSession(page);
+    await page.setViewportSize({ width, height: 1000 });
+    for (const endpoint of ["subscriptions", "payments"]) {
+      const response = await page.request.get(
+        `/api/v1/admin/${endpoint}?page=1&provider=ALL&status=ALL${endpoint === "subscriptions" ? "&plan=ALL" : ""}`,
+      );
+      expect(response.status()).toBe(200);
+      expect(response.headers()["cache-control"]).toContain("no-store");
+    }
+    await mockFinance(page);
+    const { default: AxeBuilder } = await import("@axe-core/playwright");
+    const inspect = async () => {
+      expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
+      expect(
+        await page.evaluate(
+          () => document.documentElement.scrollWidth <= innerWidth,
+        ),
+      ).toBe(true);
+      expect(
+        await page
+          .getByRole("button", {
+            name: /rembourser|verser|modifier|changer|facturer|payer/i,
+          })
+          .count(),
+      ).toBe(0);
+    };
+    await page.goto("/admin/paiements");
+    await expect(
+      page.getByText("simulation-payment-0", { exact: true }),
+    ).toBeVisible();
+    await expect(
+      page.getByText(/Simulation — aucun paiement réel/).first(),
+    ).toBeVisible();
+    await expect(page.getByText(/Paiement non vérifié/).first()).toBeVisible();
+    await inspect();
+    await page.getByRole("button", { name: "Suivant", exact: true }).click();
+    await expect(page.getByText("Page 2 · 22 résultats")).toBeVisible();
+    await page.getByRole("button", { name: "Précédent", exact: true }).click();
+    await expect(page.getByText("Page 1 · 22 résultats")).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "Fournisseur", exact: true })
+      .selectOption("stripe");
+    await expect(page.getByText("Page 1 · 1 résultats")).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "Statut enregistré", exact: true })
+      .selectOption("PAID");
+    await expect(
+      page.getByText("Aucun résultat pour ces filtres."),
+    ).toBeVisible();
+    await page.goto("/admin/abonnements");
+    await expect(
+      page.getByText("simulation-period-0", { exact: true }),
+    ).toBeVisible();
+    await expect(page.getByRole("table")).toHaveAccessibleName(
+      /un statut ACTIVE ne prouve pas un droit actuel ni un paiement/,
+    );
+    await inspect();
+    await page.getByRole("button", { name: "Suivant", exact: true }).click();
+    await expect(page.getByText("Page 2 · 21 résultats")).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "Fournisseur", exact: true })
+      .selectOption("internal");
+    await expect(page.getByText("Page 1 · 7 résultats")).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "Offre", exact: true })
+      .selectOption("PRO");
+    await expect(page.getByText("Page 1 · 4 résultats")).toBeVisible();
+    await page
+      .getByRole("combobox", { name: "Statut enregistré", exact: true })
+      .selectOption("CANCELLED");
+    await expect(
+      page.getByText("Aucun résultat pour ces filtres."),
+    ).toBeVisible();
+  });
+
+test("routes financières : refus sans session, étudiant, expiration et suspension", async ({
+  page,
+}) => {
+  for (const mode of ["none", "student", "expired", "suspended"] as const) {
+    if (mode !== "none") {
+      const user = await financeSession(
+        page,
+        mode === "student" ? "STUDENT" : "ADMIN",
+      );
+      if (mode === "expired")
+        await db.session.updateMany({
+          where: { userId: user.id },
+          data: { expiresAt: new Date(0) },
+        });
+      if (mode === "suspended")
+        await db.user.update({
+          where: { id: user.id },
+          data: { disabledAt: new Date() },
+        });
+    }
+    for (const [path, endpoint] of [
+      ["abonnements", "subscriptions"],
+      ["paiements", "payments"],
+    ]) {
+      await page.goto("/admin/" + path);
+      await expect(page).toHaveURL(
+        mode === "student" ? "/app" : "/connexion?retour=%2Fadmin",
+      );
+      await expect(page.getByRole("table")).toHaveCount(0);
+      expect(
+        (await page.request.get("/api/v1/admin/" + endpoint)).status(),
+      ).toBe(mode === "student" ? 403 : 401);
+    }
+  }
+});
+
+test("masquage financier sur filtre, 403/404/503, reprise et expiration 401", async ({
+  page,
+}) => {
+  await financeSession(page);
+  let status = 200,
+    delayed = false;
+  let release!: () => void;
+  const pending = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  await page.route("**/api/v1/admin/payments?*", async (route) => {
+    if (delayed) await pending;
+    await route.fulfill({
+      status,
+      json:
+        status === 200
+          ? {
+              items: [
+                {
+                  id: "synthetic-sensitive-row",
+                  provider: "mock",
+                  amountCents: 250,
+                  currency: "eur",
+                  status: "PAID",
+                  verification: "SIMULATION",
+                  createdAt: "2020-01-01",
+                },
+              ],
+              total: 1,
+              page: 1,
+              pageSize: 20,
+            }
+          : { code: "REFUSED", message: "Réponse financière " + status },
+    });
+  });
+  await page.goto("/admin/paiements");
+  await expect(
+    page.getByText("synthetic-sensitive-row", { exact: true }),
+  ).toBeVisible();
+  delayed = true;
+  status = 403;
+  await page
+    .getByRole("combobox", { name: "Fournisseur", exact: true })
+    .selectOption("stripe");
+  await expect(page.locator('[aria-busy="true"]').first()).toBeVisible();
+  await expect(
+    page.getByText("synthetic-sensitive-row", { exact: true }),
+  ).toHaveCount(0);
+  release();
+  await expect(
+    page.getByRole("alert").filter({ hasText: "Réponse financière 403" }),
+  ).toBeVisible();
+  for (const failure of [404, 503]) {
+    status = failure;
+    await page.getByRole("button", { name: "Réessayer", exact: true }).click();
+    await expect(
+      page
+        .getByRole("alert")
+        .filter({ hasText: "Réponse financière " + failure }),
+    ).toBeVisible();
+    await expect(
+      page.getByText("synthetic-sensitive-row", { exact: true }),
+    ).toHaveCount(0);
+  }
+  status = 200;
+  await page.getByRole("button", { name: "Réessayer", exact: true }).click();
+  await expect(
+    page.getByText("synthetic-sensitive-row", { exact: true }),
+  ).toBeVisible();
+  status = 401;
+  await page
+    .getByRole("combobox", { name: "Statut enregistré", exact: true })
+    .selectOption("FAILED");
+  await expect(page).toHaveURL("/connexion?retour=%2Fadmin");
+  await expect(
+    page.getByText("synthetic-sensitive-row", { exact: true }),
+  ).toHaveCount(0);
 });

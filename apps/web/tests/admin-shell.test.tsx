@@ -25,7 +25,7 @@ it("active uniquement les routes intégrées, sans liens vers les écrans futurs
   const link = screen.getByRole("link", { name: "Vue générale" });
   expect(link).toHaveAttribute("href", "/admin");
   expect(link).toHaveAttribute("aria-current", "page");
-  for (const label of ["Gestion commerciale", "Abonnements", "Paiements"]) {
+  for (const label of ["Gestion commerciale"]) {
     expect(screen.queryByRole("link", { name: label })).not.toBeInTheDocument();
     expect(screen.getByText(label)).toHaveAttribute("aria-disabled", "true");
   }
@@ -98,12 +98,20 @@ it.each([
   "/admin/utilisateurs/id",
   "/admin/cours",
   "/admin/cours/id",
+  "/admin/abonnements",
+  "/admin/paiements",
 ])("active la rubrique intégrée correspondant à %s", (path) => {
   navigation.path = path;
   render(<AdminShell>Contenu</AdminShell>);
   expect(
     screen.getByRole("link", {
-      name: path.startsWith("/admin/utilisateurs") ? "Utilisateurs" : "Cours",
+      name: path.startsWith("/admin/utilisateurs")
+        ? "Utilisateurs"
+        : path === "/admin/abonnements"
+          ? "Abonnements"
+          : path === "/admin/paiements"
+            ? "Paiements"
+            : "Cours",
     }),
   ).toHaveAttribute("aria-current", "page");
   expect(

@@ -7,7 +7,7 @@ import { Brand } from "@revynora/ui/brand";
 import { Button } from "@revynora/ui/button";
 import { Alert } from "@revynora/ui";
 import { api, message } from "@/lib/api";
-const future = ["Gestion commerciale", "Abonnements", "Paiements"];
+const future = ["Gestion commerciale"];
 export function AdminShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const [open, setOpen] = useState(false),
@@ -46,6 +46,8 @@ export function AdminShell({ children }: { children: React.ReactNode }) {
               { href: "/admin", label: "Vue générale" },
               { href: "/admin/utilisateurs", label: "Utilisateurs" },
               { href: "/admin/cours", label: "Cours" },
+              { href: "/admin/abonnements", label: "Abonnements" },
+              { href: "/admin/paiements", label: "Paiements" },
             ].map((link) => (
               <Link
                 key={link.href}
