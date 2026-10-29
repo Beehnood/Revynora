@@ -12,9 +12,11 @@ import {
 } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
 import { useResource } from "@/lib/use-resource";
+import { UserAccessAction } from "./user-access-action";
 export function UsersView() {
   const [page, setPage] = useState(1),
     [search, setSearch] = useState("");
+  const [revision, setRevision] = useState(0);
   return (
     <>
       <PageHeader
@@ -35,10 +37,11 @@ export function UsersView() {
         </FormField>
       </Card>
       <UsersResults
-        key={page + "/" + search}
+        key={page + "/" + search + "/" + revision}
         page={page}
         search={search}
         setPage={setPage}
+        onChanged={() => setRevision((value) => value + 1)}
       />
     </>
   );
@@ -47,10 +50,12 @@ function UsersResults({
   page,
   search,
   setPage,
+  onChanged,
 }: {
   page: number;
   search: string;
   setPage: (page: number) => void;
+  onChanged: () => void;
 }) {
   const resource = useResource<AdminPage<AdminUser>>(
     "/admin/users?page=" + page + "&search=" + encodeURIComponent(search),
@@ -101,6 +106,7 @@ function UsersResults({
                       <th scope="col">E-mail</th>
                       <th scope="col">Rôle</th>
                       <th scope="col">État</th>
+                      <th scope="col">Accès</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -120,6 +126,9 @@ function UsersResults({
                           {u.role === "ADMIN" ? "Administrateur" : "Étudiant"}
                         </td>
                         <td>{u.disabledAt ? "Suspendu" : "Actif"}</td>
+                        <td>
+                          <UserAccessAction user={u} onChanged={onChanged} />
+                        </td>
                       </tr>
                     ))}
                   </tbody>

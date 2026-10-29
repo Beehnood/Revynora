@@ -339,3 +339,37 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+.integrated-admin .admin-user-action {
+  min-width: 110px;
+}
+.integrated-admin .admin-user-action fieldset,
+.integrated-admin .admin-grant-form fieldset {
+  min-width: 0;
+  display: grid;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.integrated-admin .admin-user-action label,
+.integrated-admin .admin-grant-form label {
+  display: block;
+  overflow-wrap: anywhere;
+}
+.integrated-admin .admin-user-action select,
+.integrated-admin .admin-grant-form input:not([type="checkbox"]) {
+  max-width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px;
+}
+.integrated-admin .admin-user-action p {
+  white-space: normal;
+}
+.integrated-admin .admin-grant-form legend,
+.integrated-admin .admin-main li,
+.integrated-admin .admin-main h3 {
+  overflow-wrap: anywhere;
+}

@@ -41,6 +41,12 @@ async function account(role: "ADMIN" | "STUDENT") {
 test.afterAll(async () => {
   try {
     await db.course.deleteMany({ where: { id: { in: courseIds } } });
+    await db.auditLog.deleteMany({
+      where: { OR: [{ actorId: { in: ids } }, { targetUserId: { in: ids } }] },
+    });
+    await db.internalLearningGrant.deleteMany({
+      where: { userId: { in: ids } },
+    });
     await db.user.deleteMany({ where: { id: { in: ids } } });
   } finally {
     await db.$disconnect();
@@ -326,7 +332,7 @@ for (const width of [375, 768, 1280])
       expect(
         await page
           .getByRole("button", {
-            name: /suspendre|réactiver|modifier|supprimer|publier/i,
+            name: /modifier|supprimer|publier/i,
           })
           .count(),
       ).toBe(0);

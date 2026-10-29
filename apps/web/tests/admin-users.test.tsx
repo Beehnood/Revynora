@@ -1,5 +1,10 @@
 import { beforeEach, expect, it, vi } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
+import { api } from "../lib/api";
+vi.mock("../lib/api", async (original) => ({
+  ...(await original<typeof import("../lib/api")>()),
+  api: vi.fn(),
+}));
 import { UsersView } from "../modules/admin/users/users-view";
 import { UserDetail } from "../modules/admin/users/user-detail";
 import UsersPage from "../app/admin/utilisateurs/page";
@@ -13,6 +18,9 @@ const state = vi.hoisted(() => ({
 }));
 vi.mock("../lib/use-resource", () => ({
   useResource: (path: string) => {
+    if (path.startsWith("/admin/events"))
+      return { ...state, data: { audit: [] } };
+    if (path.includes("learning-grants")) return { ...state, data: [] };
     state.paths.push(path);
     return state;
   },
@@ -32,7 +40,7 @@ beforeEach(() => {
   state.paths = [];
   vi.clearAllMocks();
 });
-it("liste, recherche encodée, pagination et absence de commandes de mutation", () => {
+it("liste, recherche encodée, pagination et actions d’accès prévues", () => {
   state.data = {
     items: [
       user,
@@ -66,7 +74,7 @@ it("liste, recherche encodée, pagination et absence de commandes de mutation", 
   expect(state.paths.at(-1)).toBe("/admin/users?page=1&search=a%26b");
   expect(
     screen.queryByRole("button", {
-      name: /suspendre|réactiver|supprimer|modifier/i,
+      name: /supprimer|modifier/i,
     }),
   ).not.toBeInTheDocument();
 });
@@ -116,7 +124,12 @@ it.each([false, true])(
       screen.getByRole("link", { name: "Retour aux utilisateurs" }),
     ).toHaveAttribute("href", "/admin/utilisateurs");
     expect(screen.getByText(disabled ? "Suspendu" : "Actif")).toBeVisible();
-    expect(screen.queryByRole("button")).not.toBeInTheDocument();
+    if (disabled)
+      expect(
+        screen.queryByRole("button", { name: /Suspendre|Réactiver/ }),
+      ).not.toBeInTheDocument();
+    else
+      expect(screen.getByRole("button", { name: "Suspendre" })).toBeVisible();
   },
 );
 it("fiche : chargement, null, erreur/404/403 et reprise sans fuite de données", () => {
@@ -138,5 +151,25 @@ it("fiche : chargement, null, erreur/404/403 et reprise sans fuite de données",
   view.rerender(<UserDetail id="a&b" />);
   expect(screen.getByRole("status")).toHaveTextContent(
     "Utilisateur non disponible",
+  );
+});
+
+it("actualise la liste après une action confirmée", async () => {
+  state.data = { items: [user], total: 1 };
+  vi.mocked(api).mockResolvedValueOnce({ ok: true });
+  render(<UsersView />);
+  fireEvent.click(screen.getByRole("button", { name: "Suspendre" }));
+  fireEvent.change(screen.getByLabelText("Motif obligatoire"), {
+    target: { value: "USER_REQUEST" },
+  });
+  fireEvent.click(screen.getByRole("checkbox"));
+  const before = state.paths.length;
+  fireEvent.click(
+    screen.getByRole("button", { name: "Confirmer la suspension" }),
+  );
+  await waitFor(() => expect(state.paths.length).toBeGreaterThan(before));
+  expect(api).toHaveBeenCalledWith(
+    "/admin/users/user",
+    expect.objectContaining({ method: "PATCH" }),
   );
 });

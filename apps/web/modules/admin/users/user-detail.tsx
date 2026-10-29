@@ -5,6 +5,9 @@ import type { AdminUser } from "@revynora/types";
 import { Card, PageHeader, Alert, LoadingState } from "@revynora/ui";
 import { Button } from "@revynora/ui/button";
 import { useResource } from "@/lib/use-resource";
+import { UserAccessAction } from "./user-access-action";
+import { UserAudit } from "./user-audit";
+import { LearningGrantsPanel } from "../learning-grants/learning-grants-panel";
 export function UserDetail({ id }: { id: string }) {
   const resource = useResource<AdminUser>(
     "/admin/users/" + encodeURIComponent(id),
@@ -30,27 +33,34 @@ export function UserDetail({ id }: { id: string }) {
         <p role="status">Utilisateur non disponible.</p>
       )}
       {user && (
-        <Card>
-          <h2>{user.name}</h2>
-          <dl>
-            <dt>Identifiant</dt>
-            <dd>{user.id}</dd>
-            <dt>E-mail</dt>
-            <dd>{user.email}</dd>
-            <dt>Rôle</dt>
-            <dd>{user.role === "ADMIN" ? "Administrateur" : "Étudiant"}</dd>
-            <dt>Inscription</dt>
-            <dd>{dateLabel(user.createdAt)}</dd>
-            <dt>État</dt>
-            <dd>{user.disabledAt ? "Suspendu" : "Actif"}</dd>
-            {user.disabledAt && (
-              <>
-                <dt>Suspension</dt>
-                <dd>{dateLabel(user.disabledAt)}</dd>
-              </>
-            )}
-          </dl>
-        </Card>
+        <>
+          <Card>
+            <h2>{user.name}</h2>
+            <dl>
+              <dt>Identifiant</dt>
+              <dd>{user.id}</dd>
+              <dt>E-mail</dt>
+              <dd>{user.email}</dd>
+              <dt>Rôle</dt>
+              <dd>{user.role === "ADMIN" ? "Administrateur" : "Étudiant"}</dd>
+              <dt>Inscription</dt>
+              <dd>{dateLabel(user.createdAt)}</dd>
+              <dt>État</dt>
+              <dd>{user.disabledAt ? "Suspendu" : "Actif"}</dd>
+              {user.disabledAt && (
+                <>
+                  <dt>Suspension</dt>
+                  <dd>{dateLabel(user.disabledAt)}</dd>
+                </>
+              )}
+            </dl>
+            <UserAccessAction user={user} onChanged={resource.reload} />
+          </Card>
+          {user.role === "ADMIN" && (
+            <LearningGrantsPanel user={user} onChanged={resource.reload} />
+          )}
+          <UserAudit userId={user.id} />
+        </>
       )}
     </>
   );
