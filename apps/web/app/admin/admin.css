@@ -373,3 +373,28 @@
 .integrated-admin .admin-main h3 {
   overflow-wrap: anywhere;
 }
+
+.integrated-admin .admin-commercial {
+  overflow-wrap: anywhere;
+}
+.integrated-admin .admin-commercial-form {
+  display: grid;
+  gap: 12px;
+  margin-block: 16px;
+}
+.integrated-admin .admin-commercial-form fieldset {
+  min-width: 0;
+  display: grid;
+  gap: 8px;
+}
+.integrated-admin .admin-commercial label {
+  display: block;
+  margin-block: 8px;
+}
+.integrated-admin .admin-commercial-version {
+  margin-block: 12px;
+}
+.integrated-admin .admin-commercial-version summary {
+  cursor: pointer;
+  min-height: 44px;
+}

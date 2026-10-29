@@ -162,11 +162,11 @@ for (const width of [375, 768, 1280])
       ).toHaveAttribute("aria-expanded", "true");
     }
     const nav = page.getByRole("navigation", { name: "Administration" });
-    await expect(nav.getByRole("link")).toHaveCount(5);
+    await expect(nav.getByRole("link")).toHaveCount(6);
     await expect(
       nav.getByRole("link", { name: "Vue générale" }),
     ).toHaveAttribute("href", "/admin");
-    await expect(nav.locator('[aria-disabled="true"]')).toHaveCount(1);
+    await expect(nav.locator('[aria-disabled="true"]')).toHaveCount(0);
     const { default: AxeBuilder } = await import("@axe-core/playwright");
     expect((await new AxeBuilder({ page }).analyze()).violations).toEqual([]);
     expect(
@@ -181,10 +181,9 @@ for (const width of [375, 768, 1280])
       await expect(nav).toBeHidden();
       await toggle.click();
     }
-    // Direct URLs must not expose any screen from a later lot.
-    for (const path of ["offres"]) {
-      expect((await page.request.get("/admin/" + path)).status()).toBe(404);
-    }
+    await expect(
+      page.getByRole("link", { name: "Gestion commerciale" }),
+    ).toHaveAttribute("href", "/admin/offres");
     await page.getByRole("button", { name: "Se déconnecter" }).click();
     await expect(page).toHaveURL("/connexion");
     expect((await page.request.get("/api/v1/admin/metrics")).status()).toBe(
