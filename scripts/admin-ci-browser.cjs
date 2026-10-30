@@ -52,13 +52,15 @@ async function main() {
     ]) {
       const code = await new Promise((accept, reject) => {
         const child = spawn(
-          "pnpm",
+          process.execPath,
           [
-            "--filter",
-            "@revynora/web",
-            "exec",
-            "playwright",
-            "test",
+            resolve("scripts/ci-playwright.cjs"),
+            "--report-dir",
+            resolve(
+              "ci-reports/admin-legacy",
+              files[0].replace(".spec.ts", ""),
+            ),
+            "--",
             "--config=playwright.polyvalent.config.ts",
             ...files,
           ],
@@ -83,7 +85,9 @@ async function main() {
     await db.$disconnect();
   }
 }
-main().catch((error) => {
-  console.error(error.message);
+main().catch(() => {
+  console.error(
+    "Historical Admin browser validation failed; inspect filtered CI reports.",
+  );
   process.exitCode = 1;
 });

@@ -1,22 +1,11 @@
 name: Web validation
 on:
   pull_request:
-    paths:
-      - "apps/web/**"
-      - "packages/**"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "turbo.json"
-      - ".github/workflows/web.yml"
+    branches: [main]
   push:
     branches: [main]
-    paths:
-      - "apps/web/**"
-      - "packages/**"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "turbo.json"
-      - ".github/workflows/web.yml"
+  merge_group:
+    types: [checks_requested]
 permissions:
   contents: read
 concurrency:
@@ -25,17 +14,28 @@ concurrency:
 jobs:
   validate:
     name: web-validation
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      EXPO_PUBLIC_API_URL: https://api.revynora.watercode.dev/api/v1
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
       - run: pnpm exec turbo typecheck --filter=@revynora/web

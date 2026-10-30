@@ -1,30 +1,11 @@
 name: Admin validation
 on:
   pull_request:
-    paths:
-      - "apps/admin/**"
-      - "apps/api/**"
-      - "apps/web/**"
-      - "prisma/**"
-      - "scripts/admin-ci-browser.cjs"
-      - "packages/**"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "turbo.json"
-      - ".github/workflows/admin.yml"
+    branches: [main]
   push:
     branches: [main]
-    paths:
-      - "apps/admin/**"
-      - "apps/api/**"
-      - "apps/web/**"
-      - "prisma/**"
-      - "scripts/admin-ci-browser.cjs"
-      - "packages/**"
-      - "pnpm-lock.yaml"
-      - "pnpm-workspace.yaml"
-      - "turbo.json"
-      - ".github/workflows/admin.yml"
+  merge_group:
+    types: [checks_requested]
 permissions:
   contents: read
 concurrency:
@@ -37,11 +18,18 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 40
     env:
-      EXPO_PUBLIC_API_URL: https://api.revynora.watercode.dev/api/v1
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
       DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
       TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
       G8_ISOLATED_TEST_DB: "true"
-      WORKER_ENABLED: "false"
       UX_ARTIFACT_DIR: ${{ github.workspace }}/apps/web/test-results/admin
     services:
       postgres:
@@ -56,13 +44,25 @@ jobs:
           --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
+      - name: Verify isolated database and Mock providers
+        run: |
+          node - <<'JS'
+          for (const name of ['DATABASE_URL', 'TEST_DATABASE_URL']) {
+            const url = new URL(process.env[name]);
+            if (url.hostname !== '127.0.0.1' || url.port !== '5433' || url.pathname !== '/revynora_test') throw Error('Isolated CI database required');
+          }
+          if (process.env.G8_ISOLATED_TEST_DB !== 'true' || process.env.BILLING_PROVIDER !== 'mock' || process.env.AI_PROVIDER !== 'mock' || process.env.STRIPE_SECRET_KEY) throw Error('Mock-only CI required');
+          JS
       - run: pnpm test:prepare
       - run: pnpm exec turbo typecheck --filter=@revynora/admin
         env:
@@ -79,12 +79,23 @@ jobs:
           ADMIN_ORIGIN: http://127.0.0.1:3412
           NEXT_PUBLIC_WEB_ORIGIN: http://127.0.0.1:3410
       - run: pnpm --filter @revynora/web exec playwright install --with-deps chromium
-      - name: Admin regression, responsive and Axe G2–G8
+      - name: Historical Admin regression, responsive and Axe G2–G9
         run: node scripts/admin-ci-browser.cjs
+      - name: Build Web for integrated Admin browser tests
+        run: pnpm exec turbo build --filter=@revynora/api --filter=@revynora/web
+        env:
+          API_URL: http://127.0.0.1:3451
+          ADMIN_ORIGIN: http://127.0.0.1:3450
+      - name: Integrated Admin foundation, responsive and Axe
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/admin-integrated/foundation -- --config=playwright.admin-foundation.config.ts session.spec.ts --output=test-results/admin-integrated/foundation
+      - name: Integrated Admin account actions and G8
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/admin-integrated/actions -- --config=playwright.admin-foundation.config.ts actions.spec.ts --output=test-results/admin-integrated/actions
+      - name: Integrated Admin commercial G9, responsive and Axe
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/admin-integrated/commercial -- --config=playwright.admin-foundation.config.ts commercial.spec.ts --output=test-results/admin-integrated/commercial
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: admin-quality
           path: |
             apps/admin/coverage
-            apps/web/test-results/admin
+            ci-reports
