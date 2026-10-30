@@ -1,24 +1,152 @@
-name: Quality
+name: Revynora CI/CD
 on:
   pull_request:
-    branches: [main]
+    branches:
+      - main
   push:
-    branches: [main]
+    branches:
+      - main
+  merge_group:
+    types:
+      - checks_requested
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
-  foundation:
+  quality-foundation:
     name: quality-foundation
-    # Playwright 1.56.1 supports Ubuntu 24.04, not the 26.04 ubuntu-latest image.
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     env:
-      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
-      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
-      WEB_ORIGIN: http://localhost:3000
-      PORT: 3001
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
       NEXT_TELEMETRY_DISABLED: 1
       TURBO_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - run: pnpm check:boundaries
+      - run: node --test scripts/check-boundaries.test.mjs
+      - name: Registration collector unit tests and isolation guard
+        run: node --test scripts/registration-e2e/collector.test.mjs scripts/ci-playwright.test.cjs
+      - run: pnpm check:prisma-integrity
+      - run: pnpm format:check
+      - name: "Shared packages: lint, TypeScript and build"
+        run: pnpm exec turbo lint typecheck build --filter="./packages/*"
+      - name: API client coverage
+        run: pnpm --filter @revynora/api-client test:coverage
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: quality-reports
+          path: packages/*/coverage
+  frontend-tests:
+    name: web-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      G8_ISOLATED_TEST_DB: "true"
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - name: Verify isolated database and Mock providers
+        run: |
+          node - <<'JS'
+          for (const name of ['DATABASE_URL', 'TEST_DATABASE_URL']) {
+            const url = new URL(process.env[name]);
+            if (url.hostname !== '127.0.0.1' || url.port !== '5433' || url.pathname !== '/revynora_test') throw Error('Isolated CI database required');
+          }
+          if (process.env.G8_ISOLATED_TEST_DB !== 'true' || process.env.BILLING_PROVIDER !== 'mock' || process.env.AI_PROVIDER !== 'mock' || process.env.STRIPE_SECRET_KEY) throw Error('Mock-only CI required');
+          JS
+      - run: pnpm exec turbo typecheck --filter=@revynora/web
+      - run: pnpm --filter @revynora/web lint
+      - run: pnpm --filter @revynora/web test:coverage
+      - name: Build API, Web and historical Admin for Web browser tests
+        run: pnpm exec turbo build --filter=@revynora/api --filter=@revynora/web --filter=@revynora/admin
+        env:
+          API_URL: http://127.0.0.1:3001
+          ADMIN_ORIGIN: http://127.0.0.1:3002
+          NEXT_PUBLIC_WEB_ORIGIN: http://127.0.0.1:3000
+      - run: pnpm --filter @revynora/web exec playwright install --with-deps chromium
+      - run: pnpm test:prepare
+      - name: Historical Web browser validation with filtered diagnostics
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/web-browser --
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-quality
+          path: |-
+            apps/web/coverage
+            ci-reports
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: revynora
+          POSTGRES_PASSWORD: local_dev_only
+          POSTGRES_DB: revynora_test
+        ports:
+          - 5433:5432
+        options: --health-cmd "pg_isready -U revynora -d revynora_test" --health-interval 5s --health-timeout 3s --health-retries 10
+      redis:
+        image: redis:7.4.6-alpine
+        ports:
+          - 6380:6379
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
+  backend-tests:
+    name: backend-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
       G8_ISOLATED_TEST_DB: "true"
     services:
       postgres:
@@ -26,48 +154,198 @@ jobs:
         env:
           POSTGRES_USER: revynora
           POSTGRES_PASSWORD: local_dev_only
-          POSTGRES_DB: revynora
-        ports: ["5433:5432"]
-        options: >-
-          --health-cmd "pg_isready -U revynora -d revynora"
-          --health-interval 5s --health-timeout 3s --health-retries 10
+          POSTGRES_DB: revynora_test
+        ports:
+          - 5433:5432
+        options: --health-cmd "pg_isready -U revynora -d revynora_test" --health-interval 5s --health-timeout 3s --health-retries 10
       redis:
         image: redis:7.4.6-alpine
-        ports: ["6380:6379"]
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 5s --health-timeout 3s --health-retries 10
+        ports:
+          - 6380:6379
+        options: --health-cmd "redis-cli ping" --health-interval 5s --health-timeout 3s --health-retries 10
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: pnpm db:generate
-      - run: pnpm check:boundaries
-      - run: node --test scripts/check-boundaries.test.mjs
-      - run: pnpm check:prisma-integrity
-      - run: pnpm format:check
-      - run: pnpm lint
-      - run: pnpm typecheck
-        env:
-          API_URL: http://127.0.0.1:3001
-      # Avoid competing Jest/Vitest coverage processes on the same runner.
-      - run: pnpm test:coverage --concurrency=1
-      - run: pnpm build
-        env:
-          API_URL: http://127.0.0.1:3001
-      - run: pnpm --filter @revynora/mobile exec expo install --check
-      - run: pnpm --filter @revynora/web exec playwright install --with-deps chromium
-      - run: pnpm test:e2e
+      - name: Verify isolated database and Mock providers
+        run: |
+          node - <<'JS'
+          for (const name of ['DATABASE_URL', 'TEST_DATABASE_URL']) {
+            const url = new URL(process.env[name]);
+            if (url.hostname !== '127.0.0.1' || url.port !== '5433' || url.pathname !== '/revynora_test') throw Error('Isolated CI database required');
+          }
+          if (process.env.G8_ISOLATED_TEST_DB !== 'true' || process.env.BILLING_PROVIDER !== 'mock' || process.env.AI_PROVIDER !== 'mock' || process.env.STRIPE_SECRET_KEY) throw Error('Mock-only CI required');
+          JS
+      - run: pnpm exec turbo typecheck --filter=@revynora/api
+      - run: pnpm --filter @revynora/api lint
+      - run: pnpm test:prepare
+      - name: API unit and PostgreSQL integration tests with coverage
+        run: pnpm --filter @revynora/api test:coverage
+      - run: pnpm build:api
+      - run: docker build -f infra/production/Dockerfile.api --target runtime -t revynora-api:ci .
+      - run: docker build -f infra/production/Dockerfile.api --target migration -t revynora-migrate:ci .
+      - name: Verify non-root migration tooling without network access
+        run: docker run --rm --network none --entrypoint pnpm revynora-migrate:ci --version
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: quality-reports
+          name: backend-quality
+          path: apps/api/coverage
+  admin-tests:
+    name: admin-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    env:
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
+      DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      TEST_DATABASE_URL: postgresql://revynora:local_dev_only@127.0.0.1:5433/revynora_test?schema=public
+      G8_ISOLATED_TEST_DB: "true"
+      UX_ARTIFACT_DIR: ${{ github.workspace }}/apps/web/test-results/admin
+    services:
+      postgres:
+        image: postgres:17.6-alpine
+        env:
+          POSTGRES_USER: revynora
+          POSTGRES_PASSWORD: local_dev_only
+          POSTGRES_DB: revynora_test
+        ports:
+          - 5433:5432
+        options: --health-cmd "pg_isready -U revynora -d revynora_test" --health-interval 5s --health-timeout 3s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm db:generate
+      - name: Verify isolated database and Mock providers
+        run: |
+          node - <<'JS'
+          for (const name of ['DATABASE_URL', 'TEST_DATABASE_URL']) {
+            const url = new URL(process.env[name]);
+            if (url.hostname !== '127.0.0.1' || url.port !== '5433' || url.pathname !== '/revynora_test') throw Error('Isolated CI database required');
+          }
+          if (process.env.G8_ISOLATED_TEST_DB !== 'true' || process.env.BILLING_PROVIDER !== 'mock' || process.env.AI_PROVIDER !== 'mock' || process.env.STRIPE_SECRET_KEY) throw Error('Mock-only CI required');
+          JS
+      - run: pnpm test:prepare
+      - run: pnpm exec turbo typecheck --filter=@revynora/admin
+        env:
+          API_URL: http://127.0.0.1:3001
+      - run: pnpm --filter @revynora/admin lint
+      - run: pnpm --filter @revynora/admin test:coverage
+      - run: pnpm build:admin
+        env:
+          API_URL: http://127.0.0.1:3001
+      - name: Build API and loopback applications for browser tests
+        run: pnpm exec turbo build --filter=@revynora/api --filter=@revynora/admin --filter=@revynora/web
+        env:
+          API_URL: http://127.0.0.1:3411
+          ADMIN_ORIGIN: http://127.0.0.1:3412
+          NEXT_PUBLIC_WEB_ORIGIN: http://127.0.0.1:3410
+      - run: pnpm --filter @revynora/web exec playwright install --with-deps chromium
+      - name: Historical Admin regression, responsive and Axe G2–G9
+        run: node scripts/admin-ci-browser.cjs
+      - name: Build Web for integrated Admin browser tests
+        run: pnpm exec turbo build --filter=@revynora/api --filter=@revynora/web
+        env:
+          API_URL: http://127.0.0.1:3451
+          ADMIN_ORIGIN: http://127.0.0.1:3450
+      - name: Integrated Admin foundation, responsive and Axe
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/admin-integrated/foundation -- --config=playwright.admin-foundation.config.ts session.spec.ts --output=test-results/admin-integrated/foundation
+      - name: Integrated Admin account actions and G8
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/admin-integrated/actions -- --config=playwright.admin-foundation.config.ts actions.spec.ts --output=test-results/admin-integrated/actions
+      - name: Integrated Admin commercial G9, responsive and Axe
+        run: node scripts/ci-playwright.cjs --report-dir ci-reports/admin-integrated/commercial -- --config=playwright.admin-foundation.config.ts commercial.spec.ts --output=test-results/admin-integrated/commercial
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: admin-quality
           path: |
-            apps/*/coverage
-            packages/*/coverage
-            apps/web/playwright-report
-            apps/web/test-results
+            apps/admin/coverage
+            ci-reports
+  mobile-tests:
+    name: mobile-validation
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    env:
+      ADMIN_WEB_INTEGRATION_ENABLED: "false"
+      AI_PROVIDER: mock
+      BILLING_PROVIDER: mock
+      MAIL_PROVIDER: local
+      WORKER_ENABLED: "false"
+      COOKIE_SECURE: "false"
+      STRIPE_SECRET_KEY: ""
+      STRIPE_WEBHOOK_SECRET: ""
+      EXPO_PUBLIC_API_URL: https://api.example.test/api/v1
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm exec turbo typecheck --filter=@revynora/mobile
+      - run: pnpm --filter @revynora/mobile lint
+      - run: pnpm --filter @revynora/mobile test:coverage
+      - run: pnpm build:mobile
+      - run: pnpm --filter @revynora/mobile exec expo install --check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: mobile-quality
+          path: apps/mobile/coverage
+  release-readiness:
+    name: release-readiness
+    needs:
+      - quality-foundation
+      - frontend-tests
+      - backend-tests
+      - admin-tests
+      - mobile-tests
+    if: ${{ always() }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Require success from every validation job
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
+        run: |-
+          node - <<'JS'
+          const fs = require('node:fs');
+          const expected = ['quality-foundation', 'frontend-tests', 'backend-tests', 'admin-tests', 'mobile-tests'];
+          const results = JSON.parse(process.env.NEEDS_JSON);
+          const failures = expected.filter(id => results[id]?.result !== 'success');
+          const rows = expected.map(id => '| ' + id + ' | ' + (results[id]?.result ?? 'missing') + ' |');
+          fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, ['## Release readiness', '', '| Job | Result |', '| --- | --- |', ...rows, '', 'Validation only: no deployment or Admin activation.', ''].join('\n'));
+          if (Object.keys(results).length !== expected.length || failures.length) {
+            throw new Error('Release blocked: ' + failures.join(', '));
+          }
+          JS

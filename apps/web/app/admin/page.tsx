@@ -1,4 +1,4 @@
-// Compatibility route: authorization and redirect live in the layout.
+import { AdminDashboard } from "@/components/admin/admin-dashboard";
 export default function Page() {
-  return null;
+  return <AdminDashboard />;
 }
