@@ -15,7 +15,7 @@
     "test:e2e": "pnpm test:prepare && pnpm --filter @revynora/web test:e2e",
     "format:check": "prettier --check .",
     "format": "prettier --write .",
-    "db:generate": "prisma generate",
+    "db:generate": "prisma generate --schema=prisma/schema.prisma",
     "db:migrate": "prisma migrate deploy",
     "db:check": "pnpm --filter @revynora/api db:check",
     "db:seed": "node scripts/initialize-test-catalog.cjs",
