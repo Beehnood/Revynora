@@ -33,6 +33,7 @@ model FoundationCheck {
   createdAt DateTime @default(now())
 }
 model User {
+  pdfDocuments PdfDocument[]
   id String @id @default(uuid())
   email String @unique
   name String
@@ -484,4 +485,37 @@ model CommercialAudit {
  beforeVersionId String?
  reason String
  createdAt DateTime @default(now())
+}
+
+
+// Raw PDF bytes are never persisted. Deleted rows retain quota metadata only.
+model PdfDocument {
+  analysisRequests PdfAnalysisRequest[]
+  id String @id @default(uuid())
+  userId String
+  user User @relation(fields:[userId], references:[id], onDelete:Cascade)
+  filename String
+  contentHash String?
+  pageCount Int
+  pages Json?
+  analysis Json?
+  status String @default("UPLOADED")
+  errorCode String?
+  chargedAt DateTime?
+  attempts Int @default(0)
+  leaseToken String?
+  startedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, contentHash])
+  @@index([userId, createdAt])
+  @@index([userId, chargedAt])
+}
+
+model PdfAnalysisRequest {
+  id String @id @default(uuid())
+  documentId String
+  document PdfDocument @relation(fields:[documentId], references:[id], onDelete:Cascade)
+  createdAt DateTime @default(now())
+  @@index([documentId, createdAt])
 }

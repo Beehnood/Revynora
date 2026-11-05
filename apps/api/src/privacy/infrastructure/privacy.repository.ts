@@ -21,6 +21,7 @@ export class PrismaPrivacyRepository implements PrivacyRepository {
         remindersEnabled: true,
         reminderConsentAt: true,
         termsAcceptedAt: true,
+        pdfDocuments: { where: { status: { not: "DELETED" } } },
         courses: {
           where: {
             OR: [

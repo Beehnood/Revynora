@@ -28,7 +28,8 @@
     "bullmq": "5.61.2",
     "ioredis": "5.8.1",
     "@js-temporal/polyfill": "0.5.1",
-    "nodemailer": "7.0.10"
+    "nodemailer": "7.0.10",
+    "pdfjs-dist": "6.5.438"
   },
   "devDependencies": {
     "@nestjs/testing": "11.1.8",

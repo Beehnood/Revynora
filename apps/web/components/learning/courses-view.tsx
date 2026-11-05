@@ -1,4 +1,5 @@
 "use client";
+import { PdfLibrary } from "./pdf-library";
 import { useState } from "react";
 import { courseSchema } from "@revynora/validation";
 import type { CourseView, PageResult } from "@revynora/types";
@@ -30,8 +31,8 @@ export function CoursesView() {
     <>
       <div className="heading-action">
         <PageHeader
-          title="Les idées à garder près de toi."
-          description="Tes notes personnelles, les mini-cours de tes tests terminés et les ressources éditoriales."
+          title="Mes cours et mes documents PDF."
+          description="Importe un PDF pour en découvrir les notions essentielles, ou retrouve tes notes et tes mini-cours."
         />
         <Button
           onClick={() => setShow(!show)}
@@ -41,6 +42,7 @@ export function CoursesView() {
           {show ? "Fermer le formulaire" : "Créer un cours personnel"}
         </Button>
       </div>
+      <PdfLibrary />
       {show && (
         <Card id="course-form" className="course-create">
           <h2>Un nouveau cours, à ta façon.</h2>

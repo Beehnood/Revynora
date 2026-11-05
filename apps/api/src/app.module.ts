@@ -1,3 +1,4 @@
+import { DocumentsModule } from "./documents/documents.module";
 import { ProgressModule } from "./progress/progress.module";
 import { NotificationsModule } from "./notifications/notifications.module";
 import { AdminModule } from "./admin/admin.module";
@@ -17,6 +18,7 @@ import { LearningModule } from "./learning/learning.module";
     BillingModule,
     AuthModule,
     LearningModule,
+    DocumentsModule,
     LeitnerModule,
     PlanningModule,
     ProgressModule,

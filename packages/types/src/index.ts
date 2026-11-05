@@ -165,3 +165,34 @@ export type LearningAccess = {
   reminders?: boolean;
   internal: { startsAt: string; expiresAt: string | null } | null;
 };
+
+export type PdfAnalysis = {
+  title: string;
+  chapters: {
+    title: string;
+    summary: string;
+    objectives: string[];
+    concepts: { name: string; explanation: string }[];
+    references: { page: number; quote: string }[];
+  }[];
+};
+export type PdfCourse = {
+  id: string;
+  filename: string;
+  pageCount: number;
+  status: string;
+  errorCode: string | null;
+  attempts: number;
+  analysis: PdfAnalysis | null;
+  createdAt: string;
+  startedAt: string | null;
+  canResume: boolean;
+};
+export type PdfConfiguration = {
+  available: boolean;
+  weeklyLimit: number | null;
+  used: number;
+  resetAt: string;
+  maxBytes: number;
+  maxPages: number;
+};
