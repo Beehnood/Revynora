@@ -64,3 +64,19 @@ it("distingue réseau, JSON invalide et validation de formulaire", async () => {
   expect(message(new RequestError("Message", "ERROR", 400))).toBe("Message");
   expect(message(null)).toContain("erreur");
 });
+it("laisse le navigateur fixer la boundary multipart sans perdre CSRF ni cookies", async () => {
+  const fetcher = vi.fn().mockResolvedValue(Response.json({ id: "document" }));
+  const body = new FormData();
+  body.append(
+    "file",
+    new Blob(["PDF fixture"], { type: "application/pdf" }),
+    "cours.pdf",
+  );
+  await createApiClient({ fetcher })("/documents", { method: "POST", body });
+  const request = fetcher.mock.calls[0][1];
+  expect(request.body).toBe(body);
+  expect(request.headers["Content-Type"]).toBeUndefined();
+  expect(request.headers["X-Revynora-Client"]).toBe("web");
+  expect(request.credentials).toBe("same-origin");
+  expect(request.cache).toBe("no-store");
+});

@@ -27,7 +27,10 @@ export function createApiClient(
         {
           ...options,
           headers: {
-            "Content-Type": "application/json",
+            ...(typeof FormData !== "undefined" &&
+            options.body instanceof FormData
+              ? {}
+              : { "Content-Type": "application/json" }),
             "X-Revynora-Client": "web",
             ...options.headers,
           },

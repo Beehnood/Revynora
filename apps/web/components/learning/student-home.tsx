@@ -26,10 +26,13 @@ export function StudentHome() {
           description="Un test, un déclic, un pas de plus dans ton apprentissage."
         />
         <Button asChild>
-          <Link href="/app/diagnostic">
-            Nouveau diagnostic <ArrowRight size={17} />
+          <Link href="/app/cours">
+            Importer mon PDF <ArrowRight size={17} />
           </Link>
         </Button>
+        <Link className="text-link" href="/app/diagnostic">
+          Nouveau diagnostic
+        </Link>
       </div>
       <ResourceState {...state} retry={state.reload} />
       {data && (
