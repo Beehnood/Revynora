@@ -2,6 +2,9 @@ import { config } from "dotenv";
 import { resolve } from "node:path";
 import { environmentSchema } from "@revynora/validation";
 export function loadEnvironment() {
+  // Backend-only secrets; never read by the Next.js root dotenv loader.
+  // Existing process variables win, then private API settings, then shared defaults.
+  config({ path: resolve(__dirname, "../../../.env.local"), quiet: true });
   config({ path: resolve(__dirname, "../../../../../.env"), quiet: true });
   const env = environmentSchema.parse(process.env);
   if (

@@ -36,8 +36,13 @@ export const environmentSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     STRIPE_PRICE_PLUS: z.string().optional(),
     STRIPE_PRICE_PRO: z.string().optional(),
-    AI_PROVIDER: z.enum(["mock", "openai"]).default("mock"),
+    AI_PROVIDER: z.enum(["mock", "openai", "gemini"]).default("mock"),
     OPENAI_API_KEY: z.string().optional(),
+    GEMINI_API_KEY: z.string().optional(),
+    GEMINI_MODEL: z
+      .string()
+      .regex(/^gemini-[a-z0-9][a-z0-9.-]{0,79}$/)
+      .default("gemini-3.8-flash"),
     OPENAI_MODEL: z.string().min(1).default("gpt-4.1-mini"),
     AI_DAILY_LIMIT: z.coerce.number().int().min(1).max(100).default(10),
     AI_TIMEOUT_MS: z.coerce.number().int().min(100).max(60000).default(20000),
@@ -77,6 +82,10 @@ export const environmentSchema = z
   .refine((v) => v.AI_PROVIDER !== "openai" || !!v.OPENAI_API_KEY?.trim(), {
     message: "OPENAI_API_KEY requise en mode openai",
     path: ["OPENAI_API_KEY"],
+  })
+  .refine((v) => v.AI_PROVIDER !== "gemini" || !!v.GEMINI_API_KEY?.trim(), {
+    message: "GEMINI_API_KEY requise en mode gemini",
+    path: ["GEMINI_API_KEY"],
   });
 
 export const registerSchema = z

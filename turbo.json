@@ -37,6 +37,12 @@
     },
     "@revynora/web#typecheck": {
       "dependsOn": ["^build", "//#db:generate"]
+    },
+    "@revynora/api#dev": {
+      "cache": false,
+      "persistent": true,
+      "dependsOn": ["^build"],
+      "passThroughEnv": ["GEMINI_API_KEY", "GEMINI_MODEL"]
     }
   },
   "globalEnv": [

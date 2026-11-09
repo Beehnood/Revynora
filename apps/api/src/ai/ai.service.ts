@@ -47,7 +47,12 @@ export class AiService {
         data: {
           userId,
           provider: this.provider.name,
-          model: this.provider.name === "openai" ? this.env.OPENAI_MODEL : null,
+          model:
+            this.provider.name === "openai"
+              ? this.env.OPENAI_MODEL
+              : this.provider.name === "gemini"
+                ? this.env.GEMINI_MODEL
+                : null,
         },
       });
     });
