@@ -1,3 +1,4 @@
+import { geminiGenerationSchema } from "../ai/gemini.schema";
 import { geminiStructured } from "../ai/gemini.client";
 import { Injectable } from "@nestjs/common";
 import { z } from "zod";
@@ -34,7 +35,7 @@ export class DocumentAi {
         const result = await geminiStructured(
           DOCUMENT_INSTRUCTIONS,
           { untrustedDocumentPages: pages },
-          schema,
+          geminiGenerationSchema(schema),
           7000,
         );
         return validateAnalysis(JSON.parse(result.text), pages);

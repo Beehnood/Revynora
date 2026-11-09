@@ -173,6 +173,47 @@ describe("Gemini structured provider (HTTP always stubbed)", () => {
     fetcher.mockResolvedValue(response({ ...analysis, chapters: [] }));
     await expect(service.analyze(pages)).rejects.toMatchObject({ status: 503 });
   });
+  it("uses a compact PDF schema on generateContent and still rejects oversized results", async () => {
+    vi.stubEnv("GEMINI_MODEL", "gemini-3.5-flash-lite");
+    fetcher.mockResolvedValue(response(analysis));
+    await new DocumentAi().analyze(pages);
+    const [url, options] = fetcher.mock.calls[0];
+    expect(url.endsWith("/gemini-3.5-flash-lite:generateContent")).toBe(true);
+    expect(options.method).toBe("POST");
+    const config = JSON.parse(options.body).generationConfig;
+    expect(config.responseMimeType).toBe("application/json");
+    expect(config.responseSchema).toBeUndefined();
+    expect(JSON.stringify(config.responseJsonSchema)).not.toMatch(
+      /"(?:maxItems|minItems|minLength|maxLength|minimum|maximum)":/,
+    );
+    expect(
+      config.responseJsonSchema.properties.chapters.items.required,
+    ).toContain("references");
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    for (const chapter of [
+      { ...analysis.chapters[0], objectives: Array(6).fill("Objectif") },
+      {
+        ...analysis.chapters[0],
+        concepts: Array(9).fill(analysis.chapters[0].concepts[0]),
+      },
+      {
+        ...analysis.chapters[0],
+        references: Array(4).fill(analysis.chapters[0].references[0]),
+      },
+      { ...analysis.chapters[0], summary: "x".repeat(1801) },
+    ]) {
+      fetcher.mockResolvedValue(response({ ...analysis, chapters: [chapter] }));
+      await expect(new DocumentAi().analyze(pages)).rejects.toMatchObject({
+        status: 503,
+      });
+    }
+    fetcher.mockResolvedValue(
+      response({ ...analysis, chapters: Array(13).fill(analysis.chapters[0]) }),
+    );
+    await expect(new DocumentAi().analyze(pages)).rejects.toMatchObject({
+      status: 503,
+    });
+  });
   it.each([400, 401, 403, 429, 500])(
     "sanitizes HTTP %i without falling back or retrying transport",
     async (status) => {
