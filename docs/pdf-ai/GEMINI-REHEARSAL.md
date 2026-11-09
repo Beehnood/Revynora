@@ -2,12 +2,41 @@
 
 ## État de cette mission
 
-Adaptation locale uniquement, depuis main c119b6c, branche feature/gemini-provider.
-Aucun appel d'inférence réel, aucune lecture/utilisation de la clé exposée,
-aucune nouvelle clé créée, aucun push ou déploiement. Les modifications locales
-préexistantes du checkout principal, notamment .env.example, sont préservées.
-La révocation de la clé exposée n'est pas effectuée par ce code : elle relève du
-compte Google du propriétaire et doit être confirmée avant toute recette réelle.
+Intégration préparée depuis main c119b6c, branche feature/gemini-provider.
+Recette réelle synthétique réussie le 9 novembre 2026 après simplification du
+schéma PDF Gemini. Aucun déploiement ni changement Production. Les modifications
+préexistantes du checkout principal, notamment .env.example et le rapport Oracle,
+sont préservées. La révocation de la clé exposée relève du propriétaire Google ;
+son statut n'est pas vérifiable par ce code. La clé privée n'est jamais publiée.
+
+## Recette réelle — 9 novembre 2026
+
+Commit testé : 11973451354145959275e756019951c7734c10ba.
+Modèle explicite : gemini-3.5-flash-lite. Le propriétaire confirme le projet
+revynora-test en Free Tier : 15 RPM, 250 000 TPM, 500 RPD. Ces quotas privés
+n'ont pas été relus automatiquement depuis Google.
+
+Un seul appel après correction, sans retry : Gemini HTTP 200 et backend HTTP 201.
+PDF synthétique non sensible de deux pages : cellule/membrane et photosynthèse.
+Deux chapitres, huit notions, deux objectifs et résumés cohérents avec les sources.
+Deux citations vérifiées sur leurs pages exactes par le validateur backend.
+Persistance privée, refus d'accès par un autre étudiant local et consultation
+validés. Après suppression, texte et analyse effacés ; quota FREE conservé à 1/3.
+Tous les comptes et opérations de recette concernent uniquement PostgreSQL local
+isolé. Aucun compte Production ou droit G.8/G.9 modifié.
+
+Compteurs fournisseur : 386 tokens en entrée, 629 en sortie, 1 015 au total.
+Coût attendu : 0 USD selon le Free Tier confirmé, sans vérification de facture.
+Aucun motif de clé/cookie/connexion détecté par le scan ciblé des logs de recette ;
+ce contrôle n'est pas un audit exhaustif. Aucun secret ou texte utilisateur privé
+n'est conservé dans ce rapport.
+
+Essais antérieurs distinctement autorisés : modèle 2.5 Flash-Lite refusé 404,
+puis 3.5 Flash-Lite avec schéma initial refusé 400 INVALID_ARGUMENT. Aucun résultat
+inventé, quota remboursé dans les deux cas ; aucune relance automatique. Le succès
+après simplification confirme l'acceptation du schéma corrigé pour cette recette,
+pas une preuve isolée que maxItems était l'unique cause du précédent 400.
+Voir [la revue du schéma](GEMINI-SCHEMA-COMPATIBILITY.md).
 
 ## Adaptateur
 
@@ -179,6 +208,5 @@ ces variables côté API uniquement, après autorisation distincte.
 extraction réelle, erreurs/refus, taille de réponse, absence de clés dans URL/logs,
 tokens et journal de quota existant. TypeScript API/Web, ESLint, builds et
 vérification du passthrough Turbo : réussis. Aucun changement du lockfile ou du
-schéma Prisma, aucune migration exécutée, aucune recette réelle Gemini encore
-exécutée. Les appels HTTP sont tous simulés dans les tests de fournisseur ;
+schéma Prisma, aucune migration Production exécutée, recette réelle décrite ci-dessus distincte des tests automatisés. Les appels HTTP sont tous simulés dans les tests de fournisseur ;
 l’extraction PDF est réelle sur des octets synthétiques non sensibles.
