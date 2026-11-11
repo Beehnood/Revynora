@@ -29,7 +29,7 @@ function pdf() {
   const threads=()=>fs.readdirSync('/proc/self/task').length;
   const warm=threads();
   for(let i=0;i<3;i++)(await Promise.all([extractor.extract(data),extractor.extract(data)])).forEach(check);
-  await assert.rejects(extractor.extract(Buffer.from('invalid')),e=>e.code==='PDF_INVALID');
+  await assert.rejects(extractor.extract(Buffer.from('invalid')),e=>e.getResponse().code==='PDF_INVALID');
   await new Promise(r=>setTimeout(r,500));
   assert.ok(threads()<=warm+1,'Worker threads leaked');
   fs.writeFileSync('/tmp/synthetic.pdf',data);
