@@ -1,0 +1,49 @@
+name: PDF ARM64 isolated validation
+on:
+  push:
+    branches: [chore/pdf-arm64-validation]
+permissions:
+  contents: read
+jobs:
+  arm64:
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: harness
+          persist-credentials: false
+      - uses: actions/checkout@v4
+        with:
+          ref: f04e00884761c17ba8b4f7e104e406f546f4e667
+          path: source
+          persist-credentials: false
+      - name: Verify exact source and isolated ARM64 builder
+        run: |
+          test "$(uname -m)" = aarch64
+          test "$(git -C source rev-parse HEAD)" = f04e00884761c17ba8b4f7e104e406f546f4e667
+          df -h .
+      - name: Build runtime and migration (no registry)
+        run: |
+          docker build --platform linux/arm64 --target runtime --label org.opencontainers.image.revision=f04e00884761c17ba8b4f7e104e406f546f4e667 -f source/infra/production/Dockerfile.api -t pdf-runtime source
+          docker build --platform linux/arm64 --target migration --label org.opencontainers.image.revision=f04e00884761c17ba8b4f7e104e406f546f4e667 -f source/infra/production/Dockerfile.api -t pdf-migrate source
+      - name: Validate runtime PDF and isolated database
+        run: python3 harness/scripts/arm64-validation/validate.py
+      - name: Export validated images for authorized repository users only
+        run: |
+          docker save pdf-runtime pdf-migrate | gzip > arm64-images.tar.gz
+          sha256sum arm64-images.tar.gz > arm64-images.tar.gz.sha256
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: pdf-arm64-evidence
+          path: evidence.json
+          retention-days: 7
+          if-no-files-found: ignore
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pdf-arm64-images
+          path: |
+            arm64-images.tar.gz
+            arm64-images.tar.gz.sha256
+          retention-days: 7
