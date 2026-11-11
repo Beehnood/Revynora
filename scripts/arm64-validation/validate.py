@@ -3,7 +3,7 @@ ROOT=pathlib.Path(__file__).resolve().parent
 report={'source':'f04e00884761c17ba8b4f7e104e406f546f4e667','previous_image':'BLOCKED: exact deployed image archive not available on hosted runner'}
 def run(args,**kwargs):
  r=subprocess.run(args,capture_output=True,text=True,**kwargs)
- if r.returncode:raise RuntimeError('Command failed: '+args[0]+' '+args[1]+' (details suppressed)')
+ if r.returncode:raise RuntimeError('Command failed: '+args[0]+' '+args[1]+' : '+r.stderr[-1800:]+r.stdout[-1800:])
  return r.stdout.strip()
 def docker(*a):return run(['docker',*a])
 try:

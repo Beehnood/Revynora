@@ -34,4 +34,4 @@ function pdf() {
   assert.ok(threads()<=warm+1,'Worker threads leaked');
   fs.writeFileSync('/tmp/synthetic.pdf',data);
   console.log(JSON.stringify({pdf:'PASS',pages:2,concurrent:2,workerShutdown:'PASS',threads:threads(),peakBytes:fs.readFileSync('/sys/fs/cgroup/memory.peak','utf8').trim()}));
-})().catch(()=>{console.error('ARM64 PDF validation failed');process.exitCode=1;});
+})().catch(e=>{console.error('ARM64 PDF validation failed: '+e.name+': '+e.message);process.exitCode=1;});
