@@ -68,7 +68,9 @@ function AttemptContent({ initial }: { initial: Attempt }) {
             description={`${attempt.quiz.topic} · ${attempt.quiz.level}`}
           />
           <Button asChild>
-            <Link href="/app/diagnostic">
+            <Link
+              href={attempt.quiz.documentId ? "/app/cours" : "/app/diagnostic"}
+            >
               Nouvel exercice <ArrowRight size={17} />
             </Link>
           </Button>
@@ -96,7 +98,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
               </h2>
               <p>
                 {result.corrected.filter((q) => q.correct).length} bonnes
-                réponses sur 5 · Corrigé le{" "}
+                réponses sur {questions.length} · Corrigé le{" "}
                 {new Date(attempt.submittedAt!).toLocaleDateString("fr-FR", {
                   timeZone: "Europe/Paris",
                 })}
@@ -105,7 +107,18 @@ function AttemptContent({ initial }: { initial: Attempt }) {
           </Card>
           <Card>
             <h2>Ton bilan</h2>
-            <h3 className="concept-heading">Notions maîtrisées</h3>
+            {attempt.quiz.documentId && (
+              <p>
+                Estimation pédagogique sur ce document, pas une note scolaire
+                officielle. Les notions à approfondir reposent uniquement sur
+                cette tentative.
+              </p>
+            )}
+            <h3 className="concept-heading">
+              {attempt.quiz.documentId
+                ? "Notions réussies sur ce test"
+                : "Notions maîtrisées"}
+            </h3>
             <div className="concept-list">
               {result.mastered.length ? (
                 result.mastered.map((c) => (
@@ -180,6 +193,12 @@ function AttemptContent({ initial }: { initial: Attempt }) {
                     <CheckCircle2 size={18} />
                     <p>{solution.explanation}</p>
                   </div>
+                  {solution.reference && (
+                    <blockquote>
+                      {solution.chapter} · Page {solution.reference.page} : «{" "}
+                      {solution.reference.quote} »
+                    </blockquote>
+                  )}
                 </Card>
               );
             })}
@@ -209,7 +228,9 @@ function AttemptContent({ initial }: { initial: Attempt }) {
         </Card>
         <div className="result-actions">
           <Button asChild>
-            <Link href="/app/diagnostic">
+            <Link
+              href={attempt.quiz.documentId ? "/app/cours" : "/app/diagnostic"}
+            >
               Continuer avec un nouveau diagnostic <ArrowRight size={17} />
             </Link>
           </Button>
@@ -224,7 +245,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
     <>
       <PageHeader
         title={attempt.quiz.topic}
-        description={`${attempt.quiz.domain} · ${attempt.quiz.level} · 5 questions pour faire le point`}
+        description={`${attempt.quiz.domain} · ${attempt.quiz.level} · ${questions.length} questions pour faire le point`}
       />
       {attempt.quiz.provider === "mock" && (
         <Alert>
@@ -238,9 +259,11 @@ function AttemptContent({ initial }: { initial: Attempt }) {
       </p>
       <div className="quiz-toolbar">
         <div>
-          <strong>{chosen} / 5 réponses choisies</strong>
+          <strong>
+            {chosen} / {questions.length} réponses choisies
+          </strong>
           <span>
-            {savedCount} / 5 sauvegardées
+            {savedCount} / {questions.length} sauvegardées
             {dirty ? " · Modifications non enregistrées" : ""}
           </span>
         </div>
@@ -249,7 +272,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
       <progress
         className="quiz-progress"
         aria-label="Questions renseignées"
-        max={5}
+        max={questions.length}
         value={chosen}
       />
       <form onSubmit={(e) => e.preventDefault()} className="quiz-form">
@@ -259,7 +282,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
               <fieldset disabled={busy}>
                 <legend>
                   <span className="question-meta">
-                    QUESTION {index + 1} SUR 5 ·{" "}
+                    QUESTION {index + 1} SUR {questions.length} ·{" "}
                     {q.type === "MULTIPLE"
                       ? "PLUSIEURS RÉPONSES"
                       : "UNE SEULE RÉPONSE"}
@@ -347,17 +370,20 @@ function AttemptContent({ initial }: { initial: Attempt }) {
             <input
               type="checkbox"
               checked={confirmed}
-              disabled={busy || dirty || savedCount !== 5}
+              disabled={busy || dirty || savedCount !== questions.length}
               onChange={(e) => setConfirmed(e.target.checked)}
             />
             <span>
-              J’ai vérifié mes cinq réponses et je souhaite recevoir la
-              correction définitive.
+              J’ai vérifié mes{" "}
+              {questions.length === 5 ? "cinq" : questions.length} réponses et
+              je souhaite recevoir la correction définitive.
             </span>
           </label>
           <Button
             type="button"
-            disabled={busy || dirty || savedCount !== 5 || !confirmed}
+            disabled={
+              busy || dirty || savedCount !== questions.length || !confirmed
+            }
             aria-busy={busy}
             onClick={async () => {
               setBusy(true);

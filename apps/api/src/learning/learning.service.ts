@@ -70,6 +70,7 @@ export class LearningService {
       select: {
         id: true,
         domain: true,
+        documentId: true,
         topic: true,
         level: true,
         provider: true,
@@ -80,21 +81,38 @@ export class LearningService {
     if (!quiz) throw notFound();
     return quiz;
   }
-  async createAttempt(userId: string, quizId: string) {
+  async createAttempt(
+    userId: string,
+    quizId: string,
+    mode: "DISCOVER" | "TEST" = "TEST",
+  ) {
     await this.quiz(userId, quizId);
     return this.db.client.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId} FOR UPDATE`;
       await tx.$queryRaw`SELECT id FROM "Quiz" WHERE id = ${quizId} FOR UPDATE`;
+      const current = await tx.quiz.findFirst({
+        where: { id: quizId, ownerId: userId },
+        select: { documentId: true },
+      });
+      if (!current) throw notFound();
       const pending = await tx.quizAttempt.findFirst({
         where: { quizId, userId, submittedAt: null },
         select: { id: true },
       });
-      return (
-        pending ??
-        tx.quizAttempt.create({
-          data: { quizId, userId },
-          select: { id: true },
-        })
-      );
+      if (pending) return pending;
+      if (
+        current.documentId &&
+        (await tx.quizAttempt.count({ where: { quizId, userId } })) >= 20
+      )
+        throw new ApiError(
+          429,
+          "PDF_ATTEMPT_LIMIT",
+          "Vingt tentatives ont déjà été commencées pour ce quiz.",
+        );
+      return tx.quizAttempt.create({
+        data: { quizId, userId, mode: current.documentId ? mode : null },
+        select: { id: true },
+      });
     });
   }
   async saveAnswer(
@@ -152,11 +170,15 @@ export class LearningService {
       });
       if (!attempt) throw notFound();
       if (attempt.submittedAt) return;
-      if (attempt.answers.length !== 5 || attempt.quiz.questions.length !== 5)
+      if (
+        attempt.answers.length !== attempt.quiz.questions.length ||
+        attempt.quiz.questions.length < 5 ||
+        attempt.quiz.questions.length > 10
+      )
         throw new ApiError(
           409,
           "ANSWERS_INCOMPLETE",
-          "Répondez aux cinq questions avant de soumettre le test.",
+          "Répondez à toutes les questions avant de soumettre le test.",
         );
       const result = grade(attempt.quiz.questions, attempt.answers);
       await tx.quizAttempt.update({
@@ -175,6 +197,7 @@ export class LearningService {
     const quiz = await this.quiz(userId, attempt.quizId);
     return {
       id: attempt.id,
+      mode: attempt.mode,
       startedAt: attempt.startedAt,
       submittedAt: attempt.submittedAt,
       score: attempt.score,
@@ -194,6 +217,11 @@ export class LearningService {
                 text: q.text,
                 concept: q.concept,
                 explanation: q.explanation,
+                chapter: q.chapter,
+                reference:
+                  q.sourcePage && q.sourceQuote
+                    ? { page: q.sourcePage, quote: q.sourceQuote }
+                    : null,
                 correctOptionIds: q.options
                   .filter((o) => o.correct)
                   .map((o) => o.id),

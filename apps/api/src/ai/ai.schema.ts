@@ -27,39 +27,49 @@ export const generatedSchema = z
       .length(5),
   })
   .strict()
-  .superRefine((quiz, context) => {
-    const texts = new Set<string>();
-    quiz.questions.forEach((q, index) => {
-      const correct = q.options.filter((o) => o.correct).length;
-      if (
-        correct === 0 ||
-        correct === q.options.length ||
-        (q.type === "SINGLE" && correct !== 1) ||
-        (q.type === "MULTIPLE" && correct < 2)
-      )
-        context.addIssue({
-          code: "custom",
-          message: "Options incohérentes.",
-          path: ["questions", index, "options"],
-        });
-      if (
-        new Set(q.options.map((o) => o.text.trim().toLowerCase())).size !==
-        q.options.length
-      )
-        context.addIssue({
-          code: "custom",
-          message: "Options identiques.",
-          path: ["questions", index],
-        });
-      if (texts.has(q.text))
-        context.addIssue({
-          code: "custom",
-          message: "Questions identiques.",
-          path: ["questions", index],
-        });
-      texts.add(q.text);
-    });
+  .superRefine((quiz, context) =>
+    validateGeneratedQuestions(quiz.questions, context),
+  );
+export function validateGeneratedQuestions(
+  questions: {
+    text: string;
+    type: "SINGLE" | "MULTIPLE";
+    options: { text: string; correct: boolean }[];
+  }[],
+  context: z.RefinementCtx,
+) {
+  const texts = new Set<string>();
+  questions.forEach((q, index) => {
+    const correct = q.options.filter((o) => o.correct).length;
+    if (
+      correct === 0 ||
+      correct === q.options.length ||
+      (q.type === "SINGLE" && correct !== 1) ||
+      (q.type === "MULTIPLE" && correct < 2)
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Options incohérentes.",
+        path: ["questions", index, "options"],
+      });
+    if (
+      new Set(q.options.map((o) => o.text.trim().toLowerCase())).size !==
+      q.options.length
+    )
+      context.addIssue({
+        code: "custom",
+        message: "Options identiques.",
+        path: ["questions", index],
+      });
+    if (texts.has(q.text))
+      context.addIssue({
+        code: "custom",
+        message: "Questions identiques.",
+        path: ["questions", index],
+      });
+    texts.add(q.text);
   });
+}
 export type GeneratedQuiz = z.infer<typeof generatedSchema>;
 export type DiagnosticInput = {
   domain: "Sciences" | "Mathématiques" | "Langues";

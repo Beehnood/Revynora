@@ -8,6 +8,7 @@ import { PdfExtractor } from "./pdf-extractor";
 import { DocumentAi } from "./document-ai";
 import { pagesSchema, weekStart } from "./document.schema";
 const publicFields = {
+  quiz: { select: { id: true } },
   id: true,
   filename: true,
   pageCount: true,
@@ -252,6 +253,22 @@ export class DocumentsService {
   async remove(userId: string, id: string) {
     return this.db.client.$transaction(async (tx) => {
       await tx.$queryRaw`SELECT id FROM "User" WHERE id=${userId} FOR UPDATE`;
+      const linked = await tx.quiz.findMany({
+        where: { documentId: id, ownerId: userId },
+        select: { courseId: true },
+      });
+      await tx.quiz.deleteMany({ where: { documentId: id, ownerId: userId } });
+      await tx.leitnerCard.deleteMany({
+        where: { courseId: { in: linked.map((q) => q.courseId) }, userId },
+      });
+      await tx.course.deleteMany({
+        where: { id: { in: linked.map((q) => q.courseId) }, ownerId: userId },
+      });
+      // Content-free quota history stays counted after source deletion.
+      await tx.aIUsage.updateMany({
+        where: { documentId: id, userId },
+        data: { documentId: null },
+      });
       const changed = await tx.pdfDocument.updateMany({
         where: { id, userId, status: { not: "DELETED" } },
         data: {

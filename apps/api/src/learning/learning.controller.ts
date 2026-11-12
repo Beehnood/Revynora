@@ -92,11 +92,32 @@ export class LearningController {
   @Get("quizzes/:id") quiz(@Req() req: AuthRequest, @Param("id") id: string) {
     return this.learning.quiz(req.student.id, parse(idSchema, id));
   }
-  @Post("quizzes/:id/attempts") createAttempt(
+  @Post("quizzes/:id/attempts")
+  @ApiBody({
+    required: false,
+    schema: {
+      type: "object",
+      additionalProperties: false,
+      properties: {
+        mode: { type: "string", enum: ["DISCOVER", "TEST"], default: "TEST" },
+      },
+    },
+  })
+  createAttempt(
     @Req() req: AuthRequest,
     @Param("id") id: string,
+    @Body() body: unknown,
   ) {
-    return this.learning.createAttempt(req.student.id, parse(idSchema, id));
+    return this.learning.createAttempt(
+      req.student.id,
+      parse(idSchema, id),
+      parse(
+        z
+          .object({ mode: z.enum(["DISCOVER", "TEST"]).default("TEST") })
+          .strict(),
+        body ?? {},
+      ).mode,
+    );
   }
   @Get("attempts")
   @ApiQuery({ name: "page", required: false, type: Number })

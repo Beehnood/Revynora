@@ -1,4 +1,5 @@
 "use client";
+import { PdfDiagnostic } from "./pdf-diagnostic";
 import { useEffect, useRef, useState } from "react";
 import type { PdfConfiguration, PdfCourse } from "@revynora/types";
 import { api, message } from "@/lib/api";
@@ -231,47 +232,11 @@ export function PdfLibrary() {
             )
           )}
           {item.analysis && (
-            <>
-              <h3>{item.analysis.title}</h3>
-              <p>
-                Je découvre ce cours : synthèse générale, sans diagnostic
-                préalable. Les quiz à partir du document seront disponibles dans
-                une prochaine étape.
-              </p>
-              {item.analysis.chapters.map((chapter, i) => (
-                <section key={i}>
-                  <h3>{chapter.title}</h3>
-                  <p style={{ whiteSpace: "pre-wrap" }}>{chapter.summary}</p>
-                  <h4>Objectifs pédagogiques</h4>
-                  <ul>
-                    {chapter.objectives.map((o, j) => (
-                      <li key={j}>{o}</li>
-                    ))}
-                  </ul>
-                  <h4>Notions essentielles</h4>
-                  <dl>
-                    {chapter.concepts.map((c, j) => (
-                      <div key={j}>
-                        <dt>{c.name}</dt>
-                        <dd>{c.explanation}</dd>
-                      </div>
-                    ))}
-                  </dl>
-                  <details>
-                    <summary>Références au document</summary>
-                    {chapter.references.map((ref, j) => (
-                      <blockquote key={j}>
-                        Page {ref.page} : « {ref.quote} »
-                      </blockquote>
-                    ))}
-                  </details>
-                </section>
-              ))}
-              <p>
-                Une analyse IA peut comporter des erreurs : vérifie les
-                citations et ton document d’origine.
-              </p>
-            </>
+            <PdfDiagnostic
+              key={item.id}
+              document={item}
+              available={!!config.data?.available}
+            />
           )}
         </Card>
       )}

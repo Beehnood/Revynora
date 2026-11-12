@@ -17,6 +17,7 @@ import { z } from "zod";
 import type { AuthRequest } from "../auth/auth.service";
 import { LearningAccessGuard } from "../auth/learning-access.guard";
 import { parse } from "../shared/http/errors";
+import { PdfQuizService } from "./pdf-quiz.service";
 import { DocumentsService } from "./documents.service";
 import { PdfUploadGuard } from "./pdf-upload.guard";
 import { MAX_PDF_BYTES } from "./document.schema";
@@ -27,6 +28,7 @@ const idSchema = z.string().uuid();
 @Controller("documents")
 export class DocumentsController {
   constructor(
+    @Inject(PdfQuizService) private readonly quizzes: PdfQuizService,
     @Inject(DocumentsService) private readonly documents: DocumentsService,
   ) {}
   @Get("config") config(@Req() r: AuthRequest) {
@@ -37,6 +39,15 @@ export class DocumentsController {
       r.student.id,
       parse(z.coerce.number().int().min(1).max(10000).default(1), page),
     );
+  }
+  @Post(":id/quiz") diagnostic(@Req() r: AuthRequest, @Param("id") id: string) {
+    return this.quizzes.generate(r.student.id, parse(idSchema, id));
+  }
+  @Get(":id/quiz-attempts") quizHistory(
+    @Req() r: AuthRequest,
+    @Param("id") id: string,
+  ) {
+    return this.quizzes.history(r.student.id, parse(idSchema, id));
   }
   @Get(":id") get(@Req() r: AuthRequest, @Param("id") id: string) {
     return this.documents.get(r.student.id, parse(idSchema, id));
