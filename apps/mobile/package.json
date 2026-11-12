@@ -22,7 +22,7 @@
     "@revynora/api-client": "workspace:*",
     "@revynora/types": "workspace:*",
     "@revynora/validation": "workspace:*",
-    "expo": "~57.0.32",
+    "expo": "~57.0.33",
     "expo-crypto": "~57.0.4",
     "expo-dev-client": "~57.0.21",
     "expo-secure-store": "~57.0.4",
