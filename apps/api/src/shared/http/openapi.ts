@@ -66,12 +66,13 @@ export function completeOpenApi(doc: OpenAPIObject) {
     }),
     Quiz: object({
       id,
+      documentId: { ...id, nullable: true },
       domain: str,
       topic: str,
       level: str,
       provider: str,
       createdAt: date,
-      questions: { ...array(quizQuestion), minItems: 5, maxItems: 5 },
+      questions: { ...array(quizQuestion), minItems: 5, maxItems: 10 },
     }),
     Course: object({
       id,
@@ -86,6 +87,7 @@ export function completeOpenApi(doc: OpenAPIObject) {
     Courses: page("Course"),
     Attempt: object({
       id,
+      mode: { type: "string", enum: ["DISCOVER", "TEST"], nullable: true },
       startedAt: date,
       submittedAt: { ...date, nullable: true },
       score: { type: "integer", nullable: true },
@@ -110,6 +112,14 @@ export function completeOpenApi(doc: OpenAPIObject) {
               text: str,
               concept: str,
               explanation: str,
+              chapter: { ...str, nullable: true },
+              reference: {
+                ...object({
+                  page: { type: "integer", minimum: 1, maximum: 25 },
+                  quote: str,
+                }),
+                nullable: true,
+              },
               correctOptionIds: array(id),
             }),
           ),
@@ -118,6 +128,17 @@ export function completeOpenApi(doc: OpenAPIObject) {
         description:
           "Null avant soumission. Solutions et mini-cours uniquement après soumission.",
       },
+    }),
+    PdfQuizHistory: object({
+      items: array(
+        object({
+          id,
+          startedAt: date,
+          submittedAt: { ...date, nullable: true },
+          score: { type: "integer", nullable: true },
+          mode: { type: "string", enum: ["DISCOVER", "TEST"], nullable: true },
+        }),
+      ),
     }),
     LearningConfig: object({
       provider: str,
@@ -151,6 +172,8 @@ export function completeOpenApi(doc: OpenAPIObject) {
     "GET /api/v1/learning/summary": "LearningSummary",
     "GET /api/v1/courses": "Courses",
     "POST /api/v1/courses": "Course",
+    "POST /api/v1/documents/{id}/quiz": "AttemptId",
+    "GET /api/v1/documents/{id}/quiz-attempts": "PdfQuizHistory",
     "POST /api/v1/quizzes/diagnostic": "Quiz",
     "GET /api/v1/quizzes/{id}": "Quiz",
     "POST /api/v1/quizzes/{id}/attempts": "AttemptId",

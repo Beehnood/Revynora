@@ -19,9 +19,13 @@ vi.mock("@/lib/use-resource", () => ({
           used: 0,
           resetAt: "2026-11-09T00:00:00Z",
         }
-      : { items: state.items, total: state.items.length },
+      : {
+          items: path.includes("quiz-attempts") ? [] : state.items,
+          total: state.items.length,
+        },
   }),
 }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
 vi.mock("@/lib/api", () => ({
   api: state.request,
   message: (e: Error) => e.message,
@@ -86,9 +90,13 @@ it("affiche les notions et citations sans inventer de niveau ou de quiz", () => 
   ];
   render(<PdfLibrary />);
   fireEvent.click(screen.getByRole("button", { name: "Ouvrir cours.pdf" }));
+  fireEvent.click(screen.getByRole("button", { name: "Je découvre ce cours" }));
+  expect(state.request).not.toHaveBeenCalled();
   expect(screen.getByText("Membrane cellulaire")).toBeInTheDocument();
   expect(screen.getByText(/Page 2 :/)).toBeInTheDocument();
-  expect(screen.getByText(/sans diagnostic préalable/)).toBeInTheDocument();
+  expect(
+    screen.getByText(/pas une note scolaire officielle/),
+  ).toBeInTheDocument();
   expect(screen.queryByText("Notions maîtrisées")).not.toBeInTheDocument();
 });
 it("présente les échecs IA et permet la reprise explicite", async () => {

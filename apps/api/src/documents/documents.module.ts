@@ -1,3 +1,4 @@
+import { PdfQuizService } from "./pdf-quiz.service";
 import { PdfUploadGuard } from "./pdf-upload.guard";
 import { Module } from "@nestjs/common";
 import { AuthModule } from "../auth/auth.module";
@@ -8,6 +9,12 @@ import { DocumentAi } from "./document-ai";
 @Module({
   imports: [AuthModule],
   controllers: [DocumentsController],
-  providers: [DocumentsService, PdfExtractor, DocumentAi, PdfUploadGuard],
+  providers: [
+    PdfQuizService,
+    DocumentsService,
+    PdfExtractor,
+    DocumentAi,
+    PdfUploadGuard,
+  ],
 })
 export class DocumentsModule {}

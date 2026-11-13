@@ -19,6 +19,7 @@ export type QuizQuestion = {
   options: { id: string; text: string }[];
 };
 export type PublicQuiz = {
+  documentId?: string | null;
   id: string;
   domain: string;
   topic: string;
@@ -28,6 +29,7 @@ export type PublicQuiz = {
   questions: QuizQuestion[];
 };
 export type Attempt = {
+  mode?: string | null;
   id: string;
   startedAt: string;
   submittedAt: string | null;
@@ -45,6 +47,8 @@ export type Attempt = {
       text: string;
       concept: string;
       explanation: string;
+      chapter?: string | null;
+      reference?: { page: number; quote: string } | null;
       correctOptionIds: string[];
     }[];
   };
@@ -177,6 +181,7 @@ export type PdfAnalysis = {
   }[];
 };
 export type PdfCourse = {
+  quiz?: { id: string } | null;
   id: string;
   filename: string;
   pageCount: number;

@@ -93,6 +93,8 @@ model Course {
   @@index([ownerId, createdAt])
 }
 model Quiz {
+  documentId String? @unique
+  document PdfDocument? @relation(fields:[documentId],references:[id],onDelete:Cascade)
   id String @id @default(uuid())
   ownerId String
   owner User @relation(fields:[ownerId], references:[id], onDelete:Cascade)
@@ -108,6 +110,9 @@ model Quiz {
   @@index([ownerId, createdAt])
 }
 model Question {
+  chapter String?
+  sourcePage Int?
+  sourceQuote String?
   id String @id @default(uuid())
   quizId String
   quiz Quiz @relation(fields:[quizId],references:[id],onDelete:Cascade)
@@ -130,6 +135,7 @@ model QuestionOption {
   @@unique([questionId, position])
 }
 model QuizAttempt {
+  mode String?
   id String @id @default(uuid())
   userId String
   user User @relation(fields:[userId],references:[id],onDelete:Cascade)
@@ -152,6 +158,8 @@ model Answer {
   @@unique([attemptId, questionId])
 }
 model AIUsage {
+  documentId String?
+  document PdfDocument? @relation(fields:[documentId],references:[id],onDelete:SetNull)
   id String @id @default(uuid())
   userId String
   user User @relation(fields:[userId],references:[id],onDelete:Cascade)
@@ -165,6 +173,7 @@ model AIUsage {
   errorCode String?
   createdAt DateTime @default(now())
   @@index([userId, createdAt])
+  @@index([documentId, createdAt])
 }
 
 enum SubscriptionStatus {
@@ -490,6 +499,8 @@ model CommercialAudit {
 
 // Raw PDF bytes are never persisted. Deleted rows retain quota metadata only.
 model PdfDocument {
+  quiz Quiz?
+  quizGenerations AIUsage[]
   analysisRequests PdfAnalysisRequest[]
   id String @id @default(uuid())
   userId String

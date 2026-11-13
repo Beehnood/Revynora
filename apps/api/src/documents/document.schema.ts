@@ -44,13 +44,19 @@ export const analysisSchema = z.object({
 export type DocumentAnalysis = z.infer<typeof analysisSchema>;
 const normalize = (s: string) =>
   s.normalize("NFKC").replace(/\s+/g, " ").trim();
+export function validateReference(
+  ref: { page: number; quote: string },
+  pages: DocumentPages,
+) {
+  const page = pages.find((p) => p.page === ref.page);
+  if (!page || !normalize(page.text).includes(normalize(ref.quote)))
+    throw new Error("Ungrounded page reference");
+}
 export function validateAnalysis(value: unknown, pages: DocumentPages) {
   const result = analysisSchema.parse(value);
   for (const chapter of result.chapters)
     for (const ref of chapter.references) {
-      const page = pages.find((p) => p.page === ref.page);
-      if (!page || !normalize(page.text).includes(normalize(ref.quote)))
-        throw new Error("Ungrounded page reference");
+      validateReference(ref, pages);
     }
   return result;
 }

@@ -1,6 +1,8 @@
 // Synthetic PDFs used only by document tests; no production analysis fixture.
 export function textPdf(
-  text = "Les cellules utilisent de l energie. La membrane protege la cellule et regule les echanges.",
+  text:
+    | string
+    | string[] = "Les cellules utilisent de l energie. La membrane protege la cellule et regule les echanges.",
   count = 1,
   active = false,
 ) {
@@ -17,7 +19,8 @@ export function textPdf(
   );
   add("<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>");
   for (let i = 0; i < count; i++) {
-    const stream = `BT /F1 ${text.length > 500 ? 0.01 : 12} Tf 30 700 Td (${text.replace(/[\\()]/g, "\\$&")}) Tj ET`;
+    const pageText = Array.isArray(text) ? text[i % text.length] : text;
+    const stream = `BT /F1 ${pageText.length > 500 ? 0.01 : 12} Tf 30 700 Td (${pageText.replace(/[\\()]/g, "\\$&")}) Tj ET`;
     add(
       `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`,
     );
