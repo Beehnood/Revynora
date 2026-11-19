@@ -179,7 +179,11 @@ test("native course creation validates and writes through the central API", asyn
 });
 test("diagnostic creates a server quiz then opens its resumable attempt", async () => {
   const { DiagnosticScreen } = require("../src/screens/learning");
-  records.set("/learning/config", { provider: "mock", remaining: 10 });
+  records.set("/learning/config", {
+    provider: "mock",
+    remaining: 10,
+    mockTopics: [{ domain: "Sciences", topic: "Les cellules" }],
+  });
   const replace = jest.fn();
   mocked.mockImplementation(async (path, options) => {
     if (path === "/quizzes/diagnostic") return { id: "quiz" } as never;
@@ -188,12 +192,25 @@ test("diagnostic creates a server quiz then opens its resumable attempt", async 
   });
   await render(<DiagnosticScreen navigation={{ replace }} />);
   await screen.findByText(/Mode démonstration/);
+  expect(screen.queryByText("Niveau")).toBeNull();
+  expect(screen.queryByText("Avancé")).toBeNull();
+  await fireEvent.changeText(
+    screen.getByLabelText("Que souhaites-tu apprendre ?"),
+    "Les cellules",
+  );
   await fireEvent.press(
     screen.getByRole("button", { name: "Lancer mon diagnostic" }),
   );
   await waitFor(() =>
     expect(replace).toHaveBeenCalledWith("Attempt", { id: "attempt" }),
   );
+  const request = mocked.mock.calls.find(
+    ([path]) => path === "/quizzes/diagnostic",
+  );
+  expect(JSON.parse(String(request?.[1]?.body))).toEqual({
+    domain: "Apprentissage libre",
+    topic: "Les cellules",
+  });
 });
 test("native QCM conceals correction, persists answers then requires submission confirmation", async () => {
   const { AttemptScreen } = require("../src/screens/learning");
@@ -390,4 +407,41 @@ test("progression presents populated scores and monthly activity without mock me
   await screen.findByText(/Fractions · 80 %/);
   await fireEvent.press(screen.getByRole("radio", { name: "30 jours" }));
   expect(screen.getByText("2026-10-17 · 2 révisions · 1 QCM")).toBeTruthy();
+});
+
+test("native result shows the server estimate and its revision advice without computing a level on the client", async () => {
+  const { AttemptScreen } = require("../src/screens/learning");
+  records.set("/attempts/graded", {
+    id: "graded",
+    submittedAt: "2026-11-19T10:00:00Z",
+    answers: [],
+    quiz: { topic: "Les cellules", provider: "openai", questions: [] },
+    result: {
+      score: 60,
+      mastered: ["Membrane"],
+      weak: ["Noyau"],
+      miniCourse: "Un cours de consolidation.",
+      questions: [],
+      assessment: {
+        level: "Intermédiaire",
+        explanation: "3/5 réponses correctes, dont une application.",
+        limitations: [
+          "Une estimation pédagogique provisoire, pas une évaluation absolue.",
+        ],
+        revisionPlan: [
+          {
+            concept: "Noyau",
+            reason: "0 réponse correcte sur 1.",
+            actions: ["Reprendre un exemple guidé."],
+          },
+        ],
+      },
+    },
+  });
+  await render(<AttemptScreen route={{ params: { id: "graded" } }} />);
+  await screen.findByText("Niveau estimé sur ce test : Intermédiaire");
+  expect(
+    screen.getByText("3/5 réponses correctes, dont une application."),
+  ).toBeTruthy();
+  expect(screen.getByText("Reprendre un exemple guidé.")).toBeTruthy();
 });

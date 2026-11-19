@@ -155,9 +155,12 @@ const bank: Record<string, { miniCourse: string; entries: Entry[] }> = {
 };
 export function mockQuiz(input: DiagnosticInput): GeneratedQuiz | null {
   const match = mockTopics.find(
-    (t) => t.domain === input.domain && t.topic === input.topic,
+    (t) =>
+      (input.domain === "Apprentissage libre" || t.domain === input.domain) &&
+      t.topic.toLocaleLowerCase("fr") ===
+        input.topic.trim().toLocaleLowerCase("fr"),
   );
-  if (!match || input.level !== "Débutant") return null;
+  if (!match) return null;
   const data = bank[match.topic];
   return {
     miniCourse: data.miniCourse,

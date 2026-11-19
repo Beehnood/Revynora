@@ -33,7 +33,10 @@ import { parse } from "../shared/http/errors";
 import { LearningService } from "./learning.service";
 import { AiService } from "../ai/ai.service";
 const body = (schema: z.ZodType) => {
-  const converted = z.toJSONSchema(schema, { unrepresentable: "any" });
+  const converted = z.toJSONSchema(schema, {
+    unrepresentable: "any",
+    io: "input",
+  });
   delete converted.$schema; // OpenAPI 3.0 SchemaObject does not accept the draft marker.
   return ApiBody({ schema: converted as SchemaObject });
 };

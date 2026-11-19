@@ -76,6 +76,8 @@ for (const width of [320, 375, 768, 1280]) {
     ).toBeVisible();
     await audit(page);
     await capture(page, "assistant");
+    await expect(page.getByLabel("Niveau", { exact: true })).toHaveCount(0);
+    await page.getByLabel("Que souhaites-tu apprendre ?").fill("Les cellules");
     await page.getByRole("button", { name: "Lancer mon diagnostic" }).click();
     await expect(page).toHaveURL(/\/app\/tentatives\//);
     await expect(page.getByRole("group")).toHaveCount(5);
@@ -229,6 +231,7 @@ test("Erreur IA visible puis reprise et dashboard en panne sans faux chiffre", a
       }),
     }),
   );
+  await page.getByLabel("Que souhaites-tu apprendre ?").fill("Les cellules");
   await page.getByRole("button", { name: "Lancer mon diagnostic" }).click();
   await expect(page.locator(".alert[role=alert]")).toContainText(
     "La génération a échoué",

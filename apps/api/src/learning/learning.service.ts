@@ -4,7 +4,9 @@ import { DatabaseService } from "../database/database.service";
 import { AiService } from "../ai/ai.service";
 import type { DiagnosticInput } from "../ai/ai.schema";
 import { ApiError } from "../shared/http/errors";
-import { grade } from "./scoring";
+import { gradeQuiz } from "./scoring";
+import { assessDiagnostic } from "./diagnostic-assessment";
+import { MIXED_DIAGNOSTIC_LEVEL } from "../shared/domain/diagnostic-design";
 const publicQuestions = {
   orderBy: { position: "asc" as const },
   select: {
@@ -36,7 +38,9 @@ export class LearningService {
         owner: { connect: { id: userId } },
         domain: input.domain,
         topic: input.topic,
-        level: input.level,
+        level: ["openai", "gemini"].includes(generated.provider)
+          ? MIXED_DIAGNOSTIC_LEVEL
+          : "Démonstration",
         provider: generated.provider,
         course: {
           create: {
@@ -180,7 +184,7 @@ export class LearningService {
           "ANSWERS_INCOMPLETE",
           "Répondez à toutes les questions avant de soumettre le test.",
         );
-      const result = grade(attempt.quiz.questions, attempt.answers);
+      const result = gradeQuiz(attempt.quiz, attempt.answers);
       await tx.quizAttempt.update({
         where: { id },
         data: { submittedAt: new Date(), score: result.score },
@@ -208,7 +212,8 @@ export class LearningService {
       })),
       result: attempt.submittedAt
         ? {
-            ...grade(attempt.quiz.questions, attempt.answers),
+            ...gradeQuiz(attempt.quiz, attempt.answers),
+            assessment: assessDiagnostic(attempt.quiz, attempt.answers),
             miniCourse: attempt.quiz.course.content,
             questions: attempt.quiz.questions
               .sort((a, b) => a.position - b.position)
@@ -275,7 +280,7 @@ export class LearningService {
           )
         : null,
       weak: completed[0]
-        ? grade(completed[0].quiz.questions, completed[0].answers).weak
+        ? gradeQuiz(completed[0].quiz, completed[0].answers).weak
         : [],
       recent: (await this.history(userId, 1, 3)).items,
     };

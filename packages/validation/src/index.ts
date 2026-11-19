@@ -107,15 +107,17 @@ export const loginSchema = registerSchema.omit({
 });
 export const diagnosticSchema = z
   .object({
-    domain: z.enum(["Sciences", "Mathématiques", "Langues"]),
+    domain: z.string().trim().min(1).max(80).default("Apprentissage libre"),
     topic: z
       .string()
       .trim()
       .min(3, "Précisez votre sujet (3 caractères minimum).")
       .max(160),
-    level: z.enum(["Débutant", "Intermédiaire", "Avancé"]),
+    // Legacy clients may still send this field; it is validated, then discarded.
+    level: z.enum(["Débutant", "Intermédiaire", "Avancé"]).optional(),
   })
-  .strict();
+  .strict()
+  .transform(({ domain, topic }) => ({ domain, topic }));
 export const courseSchema = z
   .object({
     title: z

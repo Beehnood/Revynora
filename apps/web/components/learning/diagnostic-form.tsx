@@ -6,22 +6,13 @@ import type { LearningConfig, PublicQuiz } from "@revynora/types";
 import { useResource } from "@/lib/use-resource";
 import { api, message } from "@/lib/api";
 import { ResourceState } from "./resource-state";
-import {
-  Alert,
-  Badge,
-  Card,
-  FormField,
-  Input,
-  PageHeader,
-  Select,
-} from "../ui";
+import { Alert, Badge, Card, FormField, Textarea, PageHeader } from "../ui";
 import { Button } from "../ui/button";
 import { Sparkles, ArrowRight, ClipboardCheck, BookOpen } from "../icons";
 export function DiagnosticForm() {
   const router = useRouter();
   const state = useResource<LearningConfig>("/learning/config");
-  const [domain, setDomain] = useState("Sciences");
-  const [topic, setTopic] = useState("Les cellules");
+  const [topic, setTopic] = useState("");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -92,82 +83,61 @@ export function DiagnosticForm() {
                 }
               }}
             >
-              <FormField id="domain" label="Domaine" error={errors.domain}>
-                <Select
-                  id="domain"
-                  name="domain"
-                  value={domain}
-                  disabled={busy || !!generated}
-                  onChange={(e) => {
-                    setDomain(e.target.value);
-                    setTopic(
-                      state.data?.mockTopics.find(
-                        (t) => t.domain === e.target.value,
-                      )?.topic ?? "",
-                    );
-                  }}
-                >
-                  {["Sciences", "Mathématiques", "Langues"].map((d) => (
-                    <option key={d}>{d}</option>
-                  ))}
-                </Select>
-              </FormField>
               <FormField
                 id="topic"
-                label="Sujet à explorer"
+                label="Que souhaites-tu apprendre ?"
                 error={errors.topic}
               >
-                {state.data.provider === "mock" ? (
-                  <Select
-                    id="topic"
-                    name="topic"
-                    value={topic}
-                    disabled={busy || !!generated}
-                    onChange={(e) => setTopic(e.target.value)}
-                  >
-                    {state.data.mockTopics
-                      .filter((t) => t.domain === domain)
-                      .map((t) => (
-                        <option key={t.topic}>{t.topic}</option>
-                      ))}
-                  </Select>
-                ) : (
-                  <Input
-                    id="topic"
-                    name="topic"
-                    value={topic}
-                    disabled={busy || !!generated}
-                    onChange={(e) => setTopic(e.target.value)}
-                    maxLength={160}
-                    required
-                    aria-invalid={!!errors.topic}
-                    aria-describedby={errors.topic ? "topic-error" : undefined}
-                  />
-                )}
+                <Textarea
+                  id="topic"
+                  name="topic"
+                  value={topic}
+                  rows={3}
+                  placeholder="Ex. Comprendre les fractions et savoir les utiliser dans des problèmes."
+                  disabled={busy || !!generated}
+                  onChange={(e) => setTopic(e.target.value)}
+                  maxLength={160}
+                  required
+                  aria-invalid={!!errors.topic}
+                  aria-describedby={errors.topic ? "topic-error" : "topic-help"}
+                />
+                <small id="topic-help">
+                  Décris ton objectif librement, sans choisir de niveau. Jusqu’à
+                  160 caractères.
+                </small>
               </FormField>
-              <FormField id="level" label="Niveau" error={errors.level}>
-                <Select id="level" name="level" disabled={busy || !!generated}>
-                  {(state.data.provider === "mock"
-                    ? ["Débutant"]
-                    : ["Débutant", "Intermédiaire", "Avancé"]
-                  ).map((l) => (
-                    <option key={l}>{l}</option>
+              {state.data.provider === "mock" && (
+                <fieldset>
+                  <legend>Exemples de démonstration</legend>
+                  {state.data.mockTopics.map((example) => (
+                    <Button
+                      key={example.topic}
+                      type="button"
+                      variant="outline"
+                      disabled={busy || !!generated}
+                      onClick={() => setTopic(example.topic)}
+                    >
+                      Exemple : {example.topic}
+                    </Button>
                   ))}
-                </Select>
-              </FormField>
+                </fieldset>
+              )}
               <Alert>
                 <span>
                   {state.data.provider === "mock" ? (
                     <>
                       <strong>Mode démonstration</strong> · Exercices
-                      prédéfinis, sans appel à une IA. Trois sujets de niveau
-                      débutant sont disponibles.
+                      prédéfinis, sans appel à une IA. Les exemples disponibles
+                      sont limités ; aucun niveau personnel n’est estimé en
+                      démonstration.
                     </>
                   ) : (
                     <>
-                      <strong>Génération avec OpenAI</strong> · Le domaine, le
-                      sujet et le niveau sont transmis au fournisseur. L’IA peut
-                      se tromper : confronte la correction à ton cours.
+                      <strong>Génération IA</strong> · Ta description sert à
+                      préparer des questions de difficultés variées. Ton niveau
+                      n’est pas présumé : le serveur estime ta réussite après
+                      les réponses. L’IA peut se tromper ; vérifie les
+                      corrections.
                     </>
                   )}
                 </span>
@@ -219,21 +189,30 @@ export function DiagnosticForm() {
                 <ClipboardCheck size={19} />
                 <div>
                   <strong>Réponds à cinq questions</strong>
-                  <p>Sans pression, à ton rythme.</p>
+                  <p>
+                    Des repères, des applications et du raisonnement, sans
+                    niveau à sélectionner.
+                  </p>
                 </div>
               </li>
               <li>
                 <Sparkles size={19} />
                 <div>
-                  <strong>Comprends tes réponses</strong>
-                  <p>Une correction pour chaque notion.</p>
+                  <strong>Comprends ton bilan</strong>
+                  <p>
+                    Score calculé par le serveur, corrections et estimation
+                    pédagogique provisoire.
+                  </p>
                 </div>
               </li>
               <li>
                 <BookOpen size={19} />
                 <div>
-                  <strong>Continue avec un mini-cours</strong>
-                  <p>Pour consolider ce que tu viens de voir.</p>
+                  <strong>Construis ton parcours de révision</strong>
+                  <p>
+                    Des notions prioritaires et des actions adaptées aux
+                    réponses, à réviser lors d’un nouveau test.
+                  </p>
                 </div>
               </li>
             </ol>
