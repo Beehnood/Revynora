@@ -200,9 +200,7 @@ export function Pagination({
 }
 export function DiagnosticScreen({ navigation }: ScreenProps<"Diagnostic">) {
   const config = useRemote<LearningConfig>("/learning/config"),
-    [domain, setDomain] = useState("Sciences"),
-    [topic, setTopic] = useState("Les cellules"),
-    [level, setLevel] = useState("Débutant"),
+    [topic, setTopic] = useState(""),
     action = useAction();
   return (
     <Screen>
@@ -217,41 +215,34 @@ export function DiagnosticScreen({ navigation }: ScreenProps<"Diagnostic">) {
         </Copy>
       )}
       <Card>
-        <Choices
-          label="Domaine"
-          value={domain}
-          options={["Sciences", "Mathématiques", "Langues"].map((v) => ({
-            label: v,
-            value: v,
-          }))}
-          onChange={(v) => {
-            setDomain(v);
-            setTopic(
-              v === "Sciences"
-                ? "Les cellules"
-                : v === "Mathématiques"
-                  ? "Les fractions"
-                  : "Le présent simple",
-            );
-          }}
+        <Field
+          label="Que souhaites-tu apprendre ?"
+          value={topic}
+          onChange={setTopic}
+          multiline
         />
-        <Field label="Sujet à étudier" value={topic} onChange={setTopic} />
-        <Choices
-          label="Niveau"
-          value={level}
-          onChange={setLevel}
-          options={["Débutant", "Intermédiaire", "Avancé"].map((v) => ({
-            label: v,
-            value: v,
-          }))}
-        />
+        <Copy>
+          Décris ton objectif sans choisir de niveau. Le diagnostic proposera
+          des questions de difficultés variées.
+        </Copy>
+        {config.data?.provider === "mock" && (
+          <Choices
+            label="Exemples de démonstration"
+            value={topic}
+            onChange={setTopic}
+            options={config.data.mockTopics.map((t) => ({
+              label: t.topic,
+              value: t.topic,
+            }))}
+          />
+        )}
         <Notice text={action.error} error />
         <Button
           title={action.busy ? "Préparation du test…" : "Lancer mon diagnostic"}
           disabled={action.busy || !config.data?.remaining}
           onPress={() =>
             void action.run(async () => {
-              const input = diagnosticSchema.parse({ domain, topic, level });
+              const input = diagnosticSchema.parse({ topic });
               const quiz = await api<PublicQuiz>("/quizzes/diagnostic", {
                 method: "POST",
                 body: JSON.stringify(input),
@@ -344,7 +335,7 @@ export function AttemptScreen({ route }: ScreenProps<"Attempt">) {
               <Card>
                 <Title>{attempt.result.score} %</Title>
                 <Copy>
-                  Notions acquises :{" "}
+                  Notions réussies sur ce test :{" "}
                   {attempt.result.mastered.join(", ") || "À construire"}
                 </Copy>
                 <Copy>
@@ -353,6 +344,32 @@ export function AttemptScreen({ route }: ScreenProps<"Attempt">) {
                     "Aucune lacune relevée sur ce test"}
                 </Copy>
               </Card>
+              {attempt.result.assessment && (
+                <Card>
+                  <Title>
+                    {attempt.result.assessment.level
+                      ? "Niveau estimé sur ce test : " +
+                        attempt.result.assessment.level
+                      : "Pas d’estimation de niveau"}
+                  </Title>
+                  <Copy>{attempt.result.assessment.explanation}</Copy>
+                  {attempt.result.assessment.limitations.map((text) => (
+                    <Copy key={text}>{text}</Copy>
+                  ))}
+                  <Title>Ton parcours de révision</Title>
+                  {attempt.result.assessment.revisionPlan.map((step, index) => (
+                    <View key={step.concept}>
+                      <Text style={s.label}>
+                        {index + 1}. {step.concept}
+                      </Text>
+                      <Copy>{step.reason}</Copy>
+                      {step.actions.map((action) => (
+                        <Copy key={action}>{action}</Copy>
+                      ))}
+                    </View>
+                  ))}
+                </Card>
+              )}
               {attempt.result.questions.map((q) => (
                 <Card key={q.id}>
                   <Text style={s.label}>{q.text}</Text>

@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { grade, sameOptions } from "./scoring";
+import { grade, gradeQuiz, sameOptions } from "./scoring";
+import { MIXED_DIAGNOSTIC_LEVEL } from "../shared/domain/diagnostic-design";
 describe("Correction déterministe", () => {
   it("compare les ensembles sans bonus partiel ni doublon", () => {
     expect(sameOptions(["a", "b"], ["b", "a"])).toBe(true);
@@ -52,5 +53,40 @@ describe("Correction déterministe", () => {
     ]);
     expect(result.weak).toEqual(["Même notion"]);
     expect(result.mastered).toEqual([]);
+    const variants = questions.map((q, i) => ({
+      ...q,
+      concept: i ? "MEMBRANE" : "Membrane",
+    }));
+    const answers = [
+      { questionId: "q1", selectedOptionIds: ["a"] },
+      { questionId: "q2", selectedOptionIds: ["d"] },
+    ];
+    const historical = gradeQuiz(
+      { level: "Débutant", provider: "openai", questions: variants },
+      answers,
+    );
+    expect(historical).toEqual(grade(variants, answers));
+    expect(historical.mastered).toEqual(["Membrane"]);
+    expect(historical.weak).toEqual(["MEMBRANE"]);
+    expect(
+      gradeQuiz(
+        {
+          level: MIXED_DIAGNOSTIC_LEVEL,
+          provider: "openai",
+          questions: variants,
+        },
+        answers,
+      ),
+    ).toMatchObject({
+      score: historical.score,
+      mastered: [],
+      weak: ["Membrane"],
+    });
+    expect(
+      gradeQuiz(
+        { level: "Diagnostic PDF", provider: "gemini", questions: variants },
+        answers,
+      ),
+    ).toEqual(historical);
   });
 });

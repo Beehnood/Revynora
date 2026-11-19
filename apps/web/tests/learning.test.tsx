@@ -273,10 +273,12 @@ describe("Parcours pédagogique Web", () => {
       .mockResolvedValueOnce(quiz)
       .mockResolvedValueOnce({ id: "attempt" });
     render(<DiagnosticForm />);
-    fireEvent.change(screen.getByLabelText("Domaine"), {
-      target: { value: "Mathématiques" },
-    });
-    expect(screen.getByLabelText("Sujet à explorer")).toHaveValue(
+    expect(screen.queryByLabelText("Niveau")).not.toBeInTheDocument();
+    expect(screen.queryByLabelText("Domaine")).not.toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole("button", { name: "Exemple : Les fractions" }),
+    );
+    expect(screen.getByLabelText("Que souhaites-tu apprendre ?")).toHaveValue(
       "Les fractions",
     );
     fireEvent.click(
@@ -293,6 +295,9 @@ describe("Parcours pédagogique Web", () => {
       .mockRejectedValueOnce(new Error("Ouverture interrompue"))
       .mockResolvedValueOnce({ id: "resumed" });
     render(<DiagnosticForm />);
+    fireEvent.change(screen.getByLabelText("Que souhaites-tu apprendre ?"), {
+      target: { value: "Les cellules" },
+    });
     fireEvent.click(
       screen.getByRole("button", { name: "Lancer mon diagnostic" }),
     );
@@ -308,6 +313,15 @@ describe("Parcours pédagogique Web", () => {
       expect(mocks.push).toHaveBeenCalledWith("/app/tentatives/resumed"),
     );
     expect(api).toHaveBeenCalledTimes(3);
+    const request = vi
+      .mocked(api)
+      .mock.calls.find(([path]) => path === "/quizzes/diagnostic");
+    const payload = JSON.parse(String(request?.[1]?.body));
+    expect(payload).toEqual({
+      domain: "Apprentissage libre",
+      topic: "Les cellules",
+    });
+    expect(payload).not.toHaveProperty("level");
   });
   it("valide le sujet libre OpenAI et rend la panne IA visible", async () => {
     mocks.data.set("/learning/config", {
@@ -317,14 +331,14 @@ describe("Parcours pédagogique Web", () => {
     });
     vi.mocked(api).mockRejectedValue(new Error("Fournisseur indisponible"));
     render(<DiagnosticForm />);
-    fireEvent.change(screen.getByLabelText("Sujet à explorer"), {
+    fireEvent.change(screen.getByLabelText("Que souhaites-tu apprendre ?"), {
       target: { value: "a" },
     });
     fireEvent.click(
       screen.getByRole("button", { name: "Lancer mon diagnostic" }),
     );
     expect(screen.getByRole("alert")).toHaveTextContent("Précisez votre sujet");
-    fireEvent.change(screen.getByLabelText("Sujet à explorer"), {
+    fireEvent.change(screen.getByLabelText("Que souhaites-tu apprendre ?"), {
       target: { value: "Les molécules" },
     });
     fireEvent.click(

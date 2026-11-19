@@ -1,3 +1,7 @@
+import {
+  conceptKey,
+  MIXED_DIAGNOSTIC_LEVEL,
+} from "../shared/domain/diagnostic-design";
 export function sameOptions(selected: string[], expected: string[]) {
   return (
     selected.length === expected.length &&
@@ -12,10 +16,17 @@ export function grade(
     options: { id: string; correct: boolean }[];
   }[],
   answers: { questionId: string; selectedOptionIds: string[] }[],
+  options: { normalizeConcepts?: boolean } = {},
 ) {
+  const names = new Map<string, string>();
+  for (const q of options.normalizeConcepts ? questions : [])
+    if (!names.has(conceptKey(q.concept)))
+      names.set(conceptKey(q.concept), q.concept.trim());
   const corrected = questions.map((q) => ({
     questionId: q.id,
-    concept: q.concept,
+    concept: options.normalizeConcepts
+      ? names.get(conceptKey(q.concept))!
+      : q.concept,
     correct: sameOptions(
       answers.find((a) => a.questionId === q.id)?.selectedOptionIds ?? [],
       q.options.filter((o) => o.correct).map((o) => o.id),
@@ -38,4 +49,20 @@ export function grade(
     weak,
     corrected,
   };
+}
+
+/** Preserve legacy/PDF feedback exactly; normalize only the new diagnostic design. */
+export function gradeQuiz(
+  quiz: {
+    level: string;
+    provider: string;
+    questions: Parameters<typeof grade>[0];
+  },
+  answers: Parameters<typeof grade>[1],
+) {
+  return grade(quiz.questions, answers, {
+    normalizeConcepts:
+      quiz.level === MIXED_DIAGNOSTIC_LEVEL &&
+      ["openai", "gemini"].includes(quiz.provider),
+  });
 }

@@ -28,6 +28,27 @@ export type PublicQuiz = {
   createdAt: string;
   questions: QuizQuestion[];
 };
+export type DiagnosticAssessment = {
+  level: "Débutant" | "Intermédiaire" | "Avancé" | null;
+  ruleVersion: "mixed-diagnostic-v1" | null;
+  explanation: string;
+  evidence: {
+    score: number;
+    correct: number;
+    total: number;
+    concepts: number;
+    fullyCorrectConcepts: number;
+    application: { correct: number; total: number } | null;
+    reasoning: { correct: number; total: number } | null;
+  };
+  limitations: string[];
+  revisionPlan: {
+    concept: string;
+    priority: "HIGH" | "MEDIUM" | "REINFORCEMENT";
+    reason: string;
+    actions: string[];
+  }[];
+};
 export type Attempt = {
   mode?: string | null;
   id: string;
@@ -37,6 +58,7 @@ export type Attempt = {
   quiz: PublicQuiz;
   answers: { questionId: string; selectedOptionIds: string[] }[];
   result: null | {
+    assessment?: DiagnosticAssessment;
     score: number;
     mastered: string[];
     weak: string[];

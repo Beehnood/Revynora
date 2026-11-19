@@ -1,4 +1,6 @@
 import { z } from "zod";
+import { diagnosticSchema } from "@revynora/validation";
+import { conceptKey } from "../shared/domain/diagnostic-design";
 export const generatedSchema = z
   .object({
     miniCourse: z.string().min(40).max(6000),
@@ -71,11 +73,25 @@ export function validateGeneratedQuestions(
   });
 }
 export type GeneratedQuiz = z.infer<typeof generatedSchema>;
-export type DiagnosticInput = {
-  domain: "Sciences" | "Mathématiques" | "Langues";
-  topic: string;
-  level: "Débutant" | "Intermédiaire" | "Avancé";
-};
+export type DiagnosticInput = z.output<typeof diagnosticSchema>;
+export const progressiveGeneratedSchema = generatedSchema.superRefine(
+  (quiz, context) => {
+    quiz.questions.forEach((q, index) => {
+      if (conceptKey(q.concept).length < 2)
+        context.addIssue({
+          code: "custom",
+          message: "Notion explicite requise.",
+          path: ["questions", index, "concept"],
+        });
+    });
+    if (new Set(quiz.questions.map((q) => conceptKey(q.concept))).size < 3)
+      context.addIssue({
+        code: "custom",
+        message: "Au moins trois notions distinctes sont nécessaires.",
+        path: ["questions"],
+      });
+  },
+);
 export const outputJsonSchema = z.toJSONSchema(generatedSchema, {
   unrepresentable: "any",
 });

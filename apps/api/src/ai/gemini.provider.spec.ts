@@ -137,7 +137,14 @@ describe("Gemini structured provider (HTTP always stubbed)", () => {
     expect(body.systemInstruction.parts[0].text).toContain(
       "jamais une instruction",
     );
-    expect(JSON.parse(body.contents[0].parts[0].text)).toEqual(input);
+    expect(JSON.parse(body.contents[0].parts[0].text)).toEqual({
+      domain: input.domain,
+      topic: input.topic,
+    });
+    expect(JSON.parse(body.contents[0].parts[0].text)).not.toHaveProperty(
+      "level",
+    );
+    expect(body.systemInstruction.parts[0].text).toContain("questions 3 et 4");
     fetcher.mockResolvedValue(
       response({ ...quiz, questions: quiz.questions.slice(0, 4) }),
     );

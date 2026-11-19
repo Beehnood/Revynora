@@ -4,7 +4,12 @@ import { DatabaseService } from "../database/database.service";
 import { loadEnvironment } from "../shared/config/environment";
 import { ApiError } from "../shared/http/errors";
 import { AiProvider, ProviderError } from "./ai.provider";
-import { generatedSchema, type DiagnosticInput } from "./ai.schema";
+import {
+  generatedSchema,
+  progressiveGeneratedSchema,
+  type DiagnosticInput,
+} from "./ai.schema";
+import { diagnosticSchema } from "@revynora/validation";
 import { mockTopics } from "./mock-bank";
 @Injectable()
 export class AiService {
@@ -60,10 +65,16 @@ export class AiService {
       outputTokens = 0;
     for (let attempt = 1; attempt <= this.env.AI_MAX_ATTEMPTS; attempt++) {
       try {
-        const output = await this.provider.generate(input);
+        const output = await this.provider.generate(
+          diagnosticSchema.parse(input),
+        );
         inputTokens += output.inputTokens;
         outputTokens += output.outputTokens;
-        const quiz = generatedSchema.parse(output.quiz);
+        const quiz = (
+          this.provider.name === "mock"
+            ? generatedSchema
+            : progressiveGeneratedSchema
+        ).parse(output.quiz);
         await this.db.client.aIUsage.update({
           where: { id: usage.id },
           data: {
@@ -98,7 +109,7 @@ export class AiService {
             failure.code === "MOCK_TOPIC_UNSUPPORTED" ? 400 : 503,
             failure.code,
             failure.code === "MOCK_TOPIC_UNSUPPORTED"
-              ? "En démonstration, choisissez un sujet proposé et le niveau Débutant."
+              ? "En démonstration, choisissez l’un des exemples disponibles ; aucune IA réelle n’est appelée."
               : "La génération n’a pas abouti. Vos précédents tests sont conservés. Réessayez plus tard.",
           );
         }

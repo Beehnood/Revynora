@@ -5,6 +5,7 @@ import type { Attempt } from "@revynora/types";
 import { api, message } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
 import { ResourceState } from "./resource-state";
+import { AssessmentView } from "./assessment-view";
 import { Alert, Badge, Card, PageHeader } from "../ui";
 import { Button } from "../ui/button";
 import { ArrowRight, BookOpen, CheckCircle2, ClipboardCheck } from "../icons";
@@ -65,7 +66,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
         <div className="heading-action">
           <PageHeader
             title="Chaque réponse t’apprend quelque chose."
-            description={`${attempt.quiz.topic} · ${attempt.quiz.level}`}
+            description={`${attempt.quiz.topic} · Bilan de cette tentative`}
           />
           <Button asChild>
             <Link
@@ -114,11 +115,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
                 cette tentative.
               </p>
             )}
-            <h3 className="concept-heading">
-              {attempt.quiz.documentId
-                ? "Notions réussies sur ce test"
-                : "Notions maîtrisées"}
-            </h3>
+            <h3 className="concept-heading">Notions réussies sur ce test</h3>
             <div className="concept-list">
               {result.mastered.length ? (
                 result.mastered.map((c) => (
@@ -142,6 +139,15 @@ function AttemptContent({ initial }: { initial: Attempt }) {
             </div>
           </Card>
         </div>
+        {result.assessment && (
+          <AssessmentView
+            assessment={result.assessment}
+            completedAt={attempt.submittedAt!}
+            newTestHref={
+              attempt.quiz.documentId ? "/app/cours" : "/app/diagnostic"
+            }
+          />
+        )}
         <section aria-labelledby="correction-title">
           <h2 id="correction-title" className="subsection-heading">
             Comprendre la correction
@@ -245,7 +251,7 @@ function AttemptContent({ initial }: { initial: Attempt }) {
     <>
       <PageHeader
         title={attempt.quiz.topic}
-        description={`${attempt.quiz.domain} · ${attempt.quiz.level} · ${questions.length} questions pour faire le point`}
+        description={`${attempt.quiz.domain} · ${questions.length} questions pour faire le point`}
       />
       {attempt.quiz.provider === "mock" && (
         <Alert>

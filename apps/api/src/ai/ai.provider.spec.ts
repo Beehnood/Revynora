@@ -16,14 +16,13 @@ describe("Port IA et validation", () => {
     for (const topic of mockTopics) {
       const data = await new MockProvider().generate({
         ...topic,
-        level: "Débutant",
       });
       expect(data.quiz.questions).toHaveLength(5);
       expect(generatedSchema.safeParse(data.quiz).success).toBe(true);
     }
     expect(mockQuiz({ ...input, topic: "inconnu" })).toBeNull();
     await expect(
-      new MockProvider().generate({ ...input, level: "Avancé" }),
+      new MockProvider().generate({ ...input, topic: "inconnu" }),
     ).rejects.toMatchObject({
       code: "MOCK_TOPIC_UNSUPPORTED",
       retryable: false,
@@ -75,6 +74,8 @@ describe("Port IA et validation", () => {
     expect(payload.store).toBe(false);
     expect(payload.text.format.strict).toBe(true);
     expect(payload.input).not.toContain("email");
+    expect(JSON.parse(payload.input)).not.toHaveProperty("level");
+    expect(payload.instructions).toContain("questions 3 et 4");
   });
   it.each([429, 500, 401])(
     "classe une réponse HTTP %s sans exposer le corps fournisseur",
