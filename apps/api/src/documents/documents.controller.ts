@@ -1,13 +1,17 @@
 import {
+  type ArgumentsHost,
+  Catch,
   Controller,
   Delete,
   Get,
   Inject,
   Param,
+  PayloadTooLargeException,
   Post,
   Query,
   Req,
   UploadedFile,
+  UseFilters,
   UseGuards,
   UseInterceptors,
 } from "@nestjs/common";
@@ -16,11 +20,25 @@ import { ApiBody, ApiConsumes, ApiCookieAuth, ApiTags } from "@nestjs/swagger";
 import { z } from "zod";
 import type { AuthRequest } from "../auth/auth.service";
 import { LearningAccessGuard } from "../auth/learning-access.guard";
-import { parse } from "../shared/http/errors";
+import { ApiError, ApiExceptionFilter, parse } from "../shared/http/errors";
 import { PdfQuizService } from "./pdf-quiz.service";
 import { DocumentsService } from "./documents.service";
 import { PdfUploadGuard } from "./pdf-upload.guard";
 import { MAX_PDF_BYTES } from "./document.schema";
+@Catch(PayloadTooLargeException)
+class PdfUploadSizeFilter extends ApiExceptionFilter {
+  override catch(_error: PayloadTooLargeException, host: ArgumentsHost) {
+    super.catch(
+      new ApiError(
+        413,
+        "PDF_TOO_LARGE",
+        "Le PDF dépasse la taille maximale autorisée.",
+      ),
+      host,
+    );
+  }
+}
+
 const idSchema = z.string().uuid();
 @ApiTags("Documents pédagogiques")
 @ApiCookieAuth()
@@ -54,6 +72,7 @@ export class DocumentsController {
   }
   @Post()
   @UseGuards(PdfUploadGuard)
+  @UseFilters(PdfUploadSizeFilter)
   @ApiConsumes("multipart/form-data")
   @ApiBody({
     schema: {

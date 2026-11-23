@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { PdfExtractor } from "./pdf-extractor";
 import { textPdf } from "./pdf.fixture";
 import { DocumentAi } from "./document-ai";
-import { validateAnalysis, weekStart } from "./document.schema";
+import { MAX_PDF_BYTES, validateAnalysis, weekStart } from "./document.schema";
 const pages = [
   { page: 1, text: "La cellule possede une membrane qui regule les echanges." },
 ];
@@ -30,17 +30,24 @@ describe("PDF parsing and provider boundary", () => {
     expect(result).toHaveLength(2);
     expect(result[1].text).toContain("membrane");
   }, 15000);
-  it("rejects invalid, active, excessive and textless documents", async () => {
-    const parser = new PdfExtractor();
-    for (const file of [
-      Buffer.from("not a pdf"),
-      textPdf("", 1),
-      textPdf(undefined, 26),
-      textPdf(undefined, 1, true),
-      textPdf("a".repeat(61000)),
-    ])
-      await expect(parser.extract(file)).rejects.toMatchObject({ status: 422 });
-  }, 30000);
+  it.each([
+    [Buffer.from("not a pdf"), 422, "PDF_INVALID"],
+    [Buffer.alloc(MAX_PDF_BYTES + 1), 413, "PDF_TOO_LARGE"],
+    [textPdf("", 1), 422, "PDF_INSUFFICIENT_TEXT"],
+    [textPdf(undefined, 26), 422, "PDF_PAGE_LIMIT"],
+    [textPdf(undefined, 1, true), 422, "PDF_ACTIVE_CONTENT"],
+    [textPdf("a".repeat(61000)), 422, "PDF_TEXT_LIMIT"],
+    [Buffer.from("%PDF-1.7\n%%EOF"), 422, "PDF_UNREADABLE"],
+  ])(
+    "reports import failure %#",
+    async (file, status, code) => {
+      await expect(new PdfExtractor().extract(file)).rejects.toMatchObject({
+        status,
+        response: { code },
+      });
+    },
+    15000,
+  );
   it("bounds concurrent extractors", async () => {
     const parser = new PdfExtractor();
     const requests = [parser.extract(textPdf()), parser.extract(textPdf())];

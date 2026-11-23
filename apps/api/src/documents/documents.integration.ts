@@ -333,7 +333,9 @@ it("rejects MIME spoofing, oversize and extra files before reserving quota", asy
     }),
     "large.pdf",
   );
-  expect((await req("/documents", a.cookie, "POST", tooBig)).status).toBe(413);
+  const oversize = await req("/documents", a.cookie, "POST", tooBig);
+  expect(oversize.status).toBe(413);
+  expect(await oversize.json()).toMatchObject({ code: "PDF_TOO_LARGE" });
   const two = new FormData();
   two.append(
     "file",
