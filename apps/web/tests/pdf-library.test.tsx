@@ -1,5 +1,6 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { RequestError } from "@revynora/api-client";
 import { PdfLibrary } from "../components/learning/pdf-library";
 const state = vi.hoisted(() => ({
   available: true,
@@ -16,6 +17,8 @@ vi.mock("@/lib/use-resource", () => ({
       ? {
           available: state.available,
           weeklyLimit: 3,
+          maxBytes: 3 * 1024 * 1024,
+          maxPages: 40,
           used: 0,
           resetAt: "2026-11-09T00:00:00Z",
         }
@@ -26,7 +29,8 @@ vi.mock("@/lib/use-resource", () => ({
   }),
 }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
-vi.mock("@/lib/api", () => ({
+vi.mock("@/lib/api", async () => ({
+  RequestError: (await import("@revynora/api-client")).RequestError,
   api: state.request,
   message: (e: Error) => e.message,
 }));
@@ -42,9 +46,49 @@ it("annonce une IA indisponible sans synthèse simulée ni matière obligatoire"
   expect(screen.getByRole("status")).toHaveTextContent(
     "aucun fournisseur réel",
   );
+  expect(screen.getByText(/3 Mio et 40 pages maximum/)).toBeInTheDocument();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   expect(screen.queryByText("Notions maîtrisées")).not.toBeInTheDocument();
 });
+it("désactive l’analyse sans requête quand le fournisseur est indisponible", () => {
+  state.available = false;
+  state.items = [
+    {
+      id: "one",
+      filename: "cours.pdf",
+      pageCount: 1,
+      status: "UPLOADED",
+      attempts: 0,
+    },
+  ];
+  render(<PdfLibrary />);
+  fireEvent.click(screen.getByRole("button", { name: "Ouvrir cours.pdf" }));
+  const button = screen.getByRole("button", {
+    name: "Analyse IA indisponible",
+  });
+  expect(button).toBeDisabled();
+  fireEvent.click(button);
+  expect(state.request).not.toHaveBeenCalled();
+  expect(screen.getByRole("status")).toHaveTextContent("Aucun quota");
+});
+
+it("affiche un message de taille lorsque le proxy refuse l’envoi", async () => {
+  render(<PdfLibrary />);
+  const file = new File(["%PDF-1.7"], "cours.pdf", { type: "application/pdf" });
+  state.request.mockRejectedValue(
+    new RequestError("Indisponible", "UNAVAILABLE", 413),
+  );
+  fireEvent.change(screen.getByLabelText("Mon document PDF"), {
+    target: { files: [file] },
+  });
+  fireEvent.submit(
+    screen.getByRole("button", { name: "Importer mon PDF" }).closest("form")!,
+  );
+  expect(await screen.findByRole("alert")).toHaveTextContent(
+    "L’envoi dépasse la taille maximale",
+  );
+});
+
 it("importe un vrai fichier par multipart puis présente une action distincte d’analyse", async () => {
   render(<PdfLibrary />);
   const file = new File(

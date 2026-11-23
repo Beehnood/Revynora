@@ -6,7 +6,12 @@ import { GetLearningAccess } from "../learning-access/application/learning-acces
 import { ApiError } from "../shared/http/errors";
 import { PdfExtractor } from "./pdf-extractor";
 import { DocumentAi } from "./document-ai";
-import { pagesSchema, weekStart } from "./document.schema";
+import {
+  MAX_PDF_BYTES,
+  MAX_PDF_PAGES,
+  pagesSchema,
+  weekStart,
+} from "./document.schema";
 const publicFields = {
   quiz: { select: { id: true } },
   id: true,
@@ -49,8 +54,8 @@ export class DocumentsService {
       weeklyLimit: rights.effectivePlan === "FREE" ? 3 : null,
       used,
       resetAt: new Date(start.getTime() + 7 * 86400000).toISOString(),
-      maxBytes: 3 * 1024 * 1024,
-      maxPages: 25,
+      maxBytes: MAX_PDF_BYTES,
+      maxPages: MAX_PDF_PAGES,
     };
   }
   async list(userId: string, page: number) {

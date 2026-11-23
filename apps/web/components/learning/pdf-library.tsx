@@ -2,7 +2,7 @@
 import { PdfDiagnostic } from "./pdf-diagnostic";
 import { useEffect, useRef, useState } from "react";
 import type { PdfConfiguration, PdfCourse } from "@revynora/types";
-import { api, message } from "@/lib/api";
+import { api, message, RequestError } from "@/lib/api";
 import { useResource } from "@/lib/use-resource";
 import { Alert, Badge, Card, FormField, Input } from "../ui";
 import { Button } from "../ui/button";
@@ -23,6 +23,11 @@ export function PdfLibrary() {
   const library = useResource<{ items: PdfCourse[]; total: number }>(
     `/documents?page=${page}`,
   );
+  const maxBytes = config.data?.maxBytes ?? 3 * 1024 * 1024;
+  const maxMib = maxBytes / (1024 * 1024);
+  const maxSize = `${maxMib.toLocaleString("fr-FR")} Mio`;
+  const maxPages = config.data?.maxPages ?? 40;
+  const unavailable = config.data?.available === false;
   const item = library.data?.items.find((d) => d.id === selected);
   const stale = item?.canResume === true;
   const processing = library.data?.items.some((d) => d.status === "PROCESSING");
@@ -59,8 +64,8 @@ export function PdfLibrary() {
           ton niveau.
         </p>
         <p>
-          PDF texte uniquement, 3 Mio et 25 pages maximum. Les PDF scannés,
-          protégés ou actifs ne sont pas acceptés.
+          PDF texte uniquement, {maxSize} et {maxPages} pages maximum. Les PDF
+          scannés, protégés ou actifs ne sont pas acceptés.
         </p>
         <p>
           Le fichier PDF brut n’est pas conservé. Le texte et l’analyse restent
@@ -77,11 +82,11 @@ export function PdfLibrary() {
                 ? "Analyses selon une politique d’utilisation raisonnable (20 tentatives/jour)."
                 : `${config.data.used} / ${config.data.weeklyLimit} analyses utilisées cette semaine. Réinitialisation : ${new Date(config.data.resetAt).toLocaleDateString("fr-FR", { timeZone: "UTC" })} (00:00 UTC).`}
             </p>
-            {!config.data.available && (
+            {unavailable && (
               <Alert role="status">
                 Analyse IA indisponible : aucun fournisseur réel n’est
-                configuré. Tu peux importer et retrouver tes documents ; aucune
-                synthèse simulée ne sera affichée.
+                configuré. Tu peux importer et retrouver tes documents. Aucun
+                quota d’analyse n’est consommé.
               </Alert>
             )}
           </>
@@ -93,12 +98,12 @@ export function PdfLibrary() {
             const file = (form.elements.namedItem("pdf") as HTMLInputElement)
               .files?.[0];
             if (!file) return;
-            if (
-              file.type !== "application/pdf" ||
-              !/\.pdf$/i.test(file.name) ||
-              file.size > 3 * 1024 * 1024
-            ) {
-              setError("Choisis un PDF de 3 Mio maximum.");
+            if (file.type !== "application/pdf" || !/\.pdf$/i.test(file.name)) {
+              setError("Sélectionne un fichier PDF.");
+              return;
+            }
+            if (file.size > maxBytes) {
+              setError(`Choisis un PDF de ${maxSize} maximum.`);
               return;
             }
             void action(async () => {
@@ -107,6 +112,12 @@ export function PdfLibrary() {
               const result = await api<PdfCourse>("/documents", {
                 method: "POST",
                 body,
+              }).catch((error: unknown) => {
+                if (error instanceof RequestError && error.status === 413)
+                  throw new Error(
+                    `L’envoi dépasse la taille maximale. Choisis un PDF de ${maxSize} maximum.`,
+                  );
+                throw error;
               });
               setPage(1);
               setSelected(result.id);
@@ -214,19 +225,22 @@ export function PdfLibrary() {
                   disabled={
                     busy || !config.data?.available || item.attempts >= 3
                   }
-                  onClick={() =>
+                  onClick={() => {
+                    if (!config.data?.available) return;
                     void action(() =>
                       api(`/documents/${item.id}/analyze`, { method: "POST" }),
-                    )
-                  }
+                    );
+                  }}
                 >
-                  {busy
-                    ? "Analyse en cours…"
-                    : item.status === "FAILED"
-                      ? "Réessayer l’analyse"
-                      : stale
-                        ? "Reprendre l’analyse interrompue"
-                        : "Lancer l’analyse IA"}
+                  {unavailable
+                    ? "Analyse IA indisponible"
+                    : busy
+                      ? "Analyse en cours…"
+                      : item.status === "FAILED"
+                        ? "Réessayer l’analyse"
+                        : stale
+                          ? "Reprendre l’analyse interrompue"
+                          : "Lancer l’analyse IA"}
                 </Button>
               </>
             )

@@ -1,14 +1,16 @@
 import { z } from "zod";
 export const MAX_PDF_BYTES = 3 * 1024 * 1024;
+export const MAX_PDF_PAGES = 40;
+export const MAX_PDF_TEXT = 60000;
 export const pagesSchema = z
   .array(
     z.object({
-      page: z.number().int().min(1).max(25),
-      text: z.string().max(60000),
+      page: z.number().int().min(1).max(MAX_PDF_PAGES),
+      text: z.string().max(MAX_PDF_TEXT),
     }),
   )
   .min(1)
-  .max(25);
+  .max(MAX_PDF_PAGES);
 export type DocumentPages = z.infer<typeof pagesSchema>;
 export const analysisSchema = z.object({
   title: z.string().min(1).max(160),
@@ -30,7 +32,7 @@ export const analysisSchema = z.object({
         references: z
           .array(
             z.object({
-              page: z.number().int().min(1).max(25),
+              page: z.number().int().min(1).max(MAX_PDF_PAGES),
               quote: z.string().min(10).max(240),
             }),
           )
