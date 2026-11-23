@@ -2,6 +2,7 @@ import { z } from "zod";
 import { generatedSchema, validateGeneratedQuestions } from "../ai/ai.schema";
 import {
   analysisSchema,
+  MAX_PDF_PAGES,
   validateReference,
   type DocumentPages,
 } from "./document.schema";
@@ -12,7 +13,7 @@ const question = generatedSchema.shape.questions.element.extend({
   chapterIndex: z.number().int().min(0).max(11),
   reference: z
     .object({
-      page: z.number().int().min(1).max(25),
+      page: z.number().int().min(1).max(MAX_PDF_PAGES),
       quote: z.string().min(10).max(240),
     })
     .strict(),

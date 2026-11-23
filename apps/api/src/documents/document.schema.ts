@@ -1,6 +1,6 @@
 import { z } from "zod";
 export const MAX_PDF_BYTES = 3 * 1024 * 1024;
-export const MAX_PDF_PAGES = 25;
+export const MAX_PDF_PAGES = 40;
 export const MAX_PDF_TEXT = 60000;
 export const pagesSchema = z
   .array(

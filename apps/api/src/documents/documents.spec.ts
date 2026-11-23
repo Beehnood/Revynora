@@ -34,7 +34,6 @@ describe("PDF parsing and provider boundary", () => {
     [Buffer.from("not a pdf"), 422, "PDF_INVALID"],
     [Buffer.alloc(MAX_PDF_BYTES + 1), 413, "PDF_TOO_LARGE"],
     [textPdf("", 1), 422, "PDF_INSUFFICIENT_TEXT"],
-    [textPdf(undefined, 26), 422, "PDF_PAGE_LIMIT"],
     [textPdf(undefined, 1, true), 422, "PDF_ACTIVE_CONTENT"],
     [textPdf("a".repeat(61000)), 422, "PDF_TEXT_LIMIT"],
     [Buffer.from("%PDF-1.7\n%%EOF"), 422, "PDF_UNREADABLE"],
@@ -48,6 +47,17 @@ describe("PDF parsing and provider boundary", () => {
     },
     15000,
   );
+  it("reports the explicit limit for a PDF with 41 pages", async () => {
+    await expect(
+      new PdfExtractor().extract(textPdf(undefined, 41)),
+    ).rejects.toMatchObject({
+      status: 422,
+      response: {
+        code: "PDF_PAGE_LIMIT",
+        message: "Le PDF dépasse la limite de 40 pages.",
+      },
+    });
+  }, 15000);
   it("bounds concurrent extractors", async () => {
     const parser = new PdfExtractor();
     const requests = [parser.extract(textPdf()), parser.extract(textPdf())];

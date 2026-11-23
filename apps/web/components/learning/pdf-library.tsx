@@ -26,7 +26,7 @@ export function PdfLibrary() {
   const maxBytes = config.data?.maxBytes ?? 3 * 1024 * 1024;
   const maxMib = maxBytes / (1024 * 1024);
   const maxSize = `${maxMib.toLocaleString("fr-FR")} Mio`;
-  const maxPages = config.data?.maxPages ?? 25;
+  const maxPages = config.data?.maxPages ?? 40;
   const unavailable = config.data?.available === false;
   const item = library.data?.items.find((d) => d.id === selected);
   const stale = item?.canResume === true;

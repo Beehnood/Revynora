@@ -17,6 +17,8 @@ vi.mock("@/lib/use-resource", () => ({
       ? {
           available: state.available,
           weeklyLimit: 3,
+          maxBytes: 3 * 1024 * 1024,
+          maxPages: 40,
           used: 0,
           resetAt: "2026-11-09T00:00:00Z",
         }
@@ -44,6 +46,7 @@ it("annonce une IA indisponible sans synthèse simulée ni matière obligatoire"
   expect(screen.getByRole("status")).toHaveTextContent(
     "aucun fournisseur réel",
   );
+  expect(screen.getByText(/3 Mio et 40 pages maximum/)).toBeInTheDocument();
   expect(screen.queryByRole("combobox")).not.toBeInTheDocument();
   expect(screen.queryByText("Notions maîtrisées")).not.toBeInTheDocument();
 });
